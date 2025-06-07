@@ -1,52 +1,103 @@
-import { NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
-import { supabaseServer, ApiKey } from '@/lib/supabase-server'
+import { NextRequest, NextResponse } from 'next/server'
+import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server'
+import type { ApiKey } from '@/lib/supabase/types'
 
-export async function PUT(
-  request: Request,
+export async function GET(
+  request: NextRequest,
   { params }: { params: Promise<{ key_id: string }> }
 ) {
-  const { key_id } = await params 
-  if (!key_id) {
-    return NextResponse.json({ message: 'API Key ID is required' }, { status: 400 })
-  }
-
-  const cookieStore = await cookies()
-  const supabaseAuthClient = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll()
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            )
-          } catch {
-            // The `setAll` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
-          }
-        },
-      },
-    }
-  )
-
   try {
+    // Utiliser le client avec auth utilisateur
+    const supabaseAuthClient = await createServerSupabaseClient()
+    
     const { data: { session }, error: sessionError } = await supabaseAuthClient.auth.getSession()
-    if (sessionError || !session || !session.user) {
-      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+
+    if (sessionError) {
+      console.error('Error getting session:', sessionError)
+      return NextResponse.json({ message: 'Error getting session', error: sessionError.message }, { status: 500 })
     }
-    const userId = session.user.id
+
+    if (!session || !session.user || !session.user.id) {
+      return NextResponse.json({ message: 'Unauthorized: User not authenticated' }, { status: 401 })
+    }
+
+    // ✅ Await les params car c'est une Promise dans Next.js 15
+    const { key_id } = await params
+
+    if (!key_id) {
+      return NextResponse.json(
+        { message: 'API Key ID is required' },
+        { status: 400 }
+      )
+    }
+
+    const { data, error } = await supabaseAuthClient
+      .from('api_keys')
+      .select('*')
+      .eq('id', key_id)
+      .single()
+
+    if (error) {
+      console.error(`Error fetching API key ${key_id}:`, error)
+      if (error.code === 'PGRST116') {
+        return NextResponse.json(
+          { message: `API Key with ID ${key_id} not found` },
+          { status: 404 }
+        )
+      }
+      return NextResponse.json(
+        { message: 'Error fetching API key', error: error.message },
+        { status: 500 }
+      )
+    }
+
+    if (!data) {
+      return NextResponse.json(
+        { message: `API Key with ID ${key_id} not found` },
+        { status: 404 }
+      )
+    }
+
+    return NextResponse.json(data)
+  } catch (e: any) {
+    console.error('Unexpected error fetching API key:', e)
+    return NextResponse.json({ message: 'Unexpected error fetching API key', error: e.message }, { status: 500 })
+  }
+}
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ key_id: string }> }
+) {
+  try {
+    // Utiliser le client avec auth utilisateur
+    const supabaseAuthClient = await createServerSupabaseClient()
+    
+    const { data: { session }, error: sessionError } = await supabaseAuthClient.auth.getSession()
+
+    if (sessionError) {
+      console.error('Error getting session:', sessionError)
+      return NextResponse.json({ message: 'Error getting session', error: sessionError.message }, { status: 500 })
+    }
+
+    if (!session || !session.user || !session.user.id) {
+      return NextResponse.json({ message: 'Unauthorized: User not authenticated' }, { status: 401 })
+    }
+
+    // ✅ Await les params
+    const { key_id } = await params
+
+    if (!key_id) {
+      return NextResponse.json(
+        { message: 'API Key ID is required' },
+        { status: 400 }
+      )
+    }
 
     const body = await request.json()
     const { api_key_name, is_active } = body
 
-    const updatePayload: Partial<Pick<ApiKey, 'api_key_name' | 'is_active'>> = {}
+    const updatePayload: any = {}
     if (typeof api_key_name === 'string' && api_key_name.trim() !== '') {
       updatePayload.api_key_name = api_key_name.trim()
     }
@@ -55,105 +106,117 @@ export async function PUT(
     }
 
     if (Object.keys(updatePayload).length === 0) {
-      return NextResponse.json({ message: 'No valid fields provided for update' }, { status: 400 })
+      return NextResponse.json(
+        { message: 'No valid fields provided for update' },
+        { status: 400 }
+      )
     }
 
-    const { data, error } = await supabaseServer
+    const { data, error } = await supabaseAuthClient
       .from('api_keys')
       .update(updatePayload)
       .eq('id', key_id)
-      .eq('user_id', userId) // Ensure user can only update their own keys
       .select()
       .single()
-      .returns<ApiKey | null>()
 
     if (error) {
-      console.error(`Error updating API key ${key_id} for user ${userId}:`, error)
-      if (error.code === 'PGRST116') { // Not found or not authorized
-        return NextResponse.json({ message: `API Key with ID ${key_id} not found or not owned by user` }, { status: 404 })
+      console.error(`Error updating API key ${key_id}:`, error)
+      if (error.code === 'PGRST116') {
+        return NextResponse.json(
+          { message: `API Key with ID ${key_id} not found` },
+          { status: 404 }
+        )
       }
-      return NextResponse.json({ message: 'Error updating API key', error: error.message }, { status: 500 })
+      return NextResponse.json(
+        { message: 'Error updating API key', error: error.message },
+        { status: 500 }
+      )
     }
-     if (!data) {
-      return NextResponse.json({ message: `API Key with ID ${key_id} not found or not owned by user` }, { status: 404 })
+
+    if (!data) {
+      return NextResponse.json(
+        { message: `API Key with ID ${key_id} not found` },
+        { status: 404 }
+      )
     }
 
     return NextResponse.json(data)
   } catch (e: any) {
-    console.error(`Unexpected error updating API key ${key_id}:`, e)
     if (e instanceof SyntaxError) {
-        return NextResponse.json({ message: 'Invalid request body: Malformed JSON.', error: e.message }, { status: 400 })
+      return NextResponse.json(
+        { message: 'Invalid request body: Malformed JSON.' },
+        { status: 400 }
+      )
     }
+    console.error('Unexpected error updating API key:', e)
     return NextResponse.json({ message: 'Unexpected error updating API key', error: e.message }, { status: 500 })
   }
 }
 
 export async function DELETE(
-  request: Request, // request object is not used but required by Next.js convention
+  request: NextRequest,
   { params }: { params: Promise<{ key_id: string }> }
 ) {
-  const { key_id } = await params
-  if (!key_id) {
-    return NextResponse.json({ message: 'API Key ID is required' }, { status: 400 })
-  }
-
-  const cookieStore = await cookies()
-  const supabaseAuthClient = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll()
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            )
-          } catch {
-            // The `setAll` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
-          }
-        },
-      },
-    }
-  )
-
   try {
+    // Utiliser le client avec auth utilisateur
+    const supabaseAuthClient = await createServerSupabaseClient()
+    
     const { data: { session }, error: sessionError } = await supabaseAuthClient.auth.getSession()
-    if (sessionError || !session || !session.user) {
-      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
-    }
-    const userId = session.user.id
 
-    // Instead of actual deletion, we mark the key as inactive.
-    // True deletion might be an option, but deactivation is often safer.
-    const { data, error } = await supabaseServer
+    if (sessionError) {
+      console.error('Error getting session:', sessionError)
+      return NextResponse.json({ message: 'Error getting session', error: sessionError.message }, { status: 500 })
+    }
+
+    if (!session || !session.user || !session.user.id) {
+      return NextResponse.json({ message: 'Unauthorized: User not authenticated' }, { status: 401 })
+    }
+
+    // ✅ Await les params
+    const { key_id } = await params
+
+    if (!key_id) {
+      return NextResponse.json(
+        { message: 'API Key ID is required' },
+        { status: 400 }
+      )
+    }
+
+    // Désactiver la clé au lieu de la supprimer (plus sûr)
+    const { data, error } = await supabaseAuthClient
       .from('api_keys')
-      .update({ is_active: false }) // Deactivate the key
+      .update({ is_active: false })
       .eq('id', key_id)
-      .eq('user_id', userId) // Ensure user can only deactivate their own keys
-      .select('id') // Select minimal data to confirm operation
+      .select('id')
       .single()
 
     if (error) {
-      console.error(`Error deactivating API key ${key_id} for user ${userId}:`, error)
-       if (error.code === 'PGRST116') { // Not found or not authorized
-        return NextResponse.json({ message: `API Key with ID ${key_id} not found or not owned by user` }, { status: 404 })
+      console.error(`Error deactivating API key ${key_id}:`, error)
+      if (error.code === 'PGRST116') {
+        return NextResponse.json(
+          { message: `API Key with ID ${key_id} not found` },
+          { status: 404 }
+        )
       }
-      return NextResponse.json({ message: 'Error deactivating API key', error: error.message }, { status: 500 })
+      return NextResponse.json(
+        { message: 'Error deactivating API key', error: error.message },
+        { status: 500 }
+      )
     }
     
     if (!data) {
-         return NextResponse.json({ message: `API Key with ID ${key_id} not found or not owned by user` }, { status: 404 })
+      return NextResponse.json(
+        { message: `API Key with ID ${key_id} not found` },
+        { status: 404 }
+      )
     }
 
-
-    return NextResponse.json({ message: `API Key ${key_id} deactivated successfully` }, { status: 200 })
+    return NextResponse.json(
+      { message: `API Key ${key_id} deactivated successfully` },
+      { status: 200 }
+    )
   } catch (e: any) {
-    console.error(`Unexpected error deactivating API key ${key_id}:`, e)
+    console.error('Unexpected error deactivating API key:', e)
     return NextResponse.json({ message: 'Unexpected error deactivating API key', error: e.message }, { status: 500 })
   }
 }

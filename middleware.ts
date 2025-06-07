@@ -3,13 +3,22 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export async function middleware(req: NextRequest) {
-  // Ne traiter que les routes qui correspondent au matcher
-  if (!req.nextUrl.pathname.startsWith('/dashboard') && 
-      !req.nextUrl.pathname.startsWith('/api-keys')) {
-    return NextResponse.next();
+  // Routes protégées
+  const protectedPaths = ['/dashboard', '/api-keys', '/chat']
+  
+  // Vérifier si la route actuelle est protégée
+  const isProtectedPath = protectedPaths.some(path => 
+    req.nextUrl.pathname.startsWith(path)
+  )
+  
+  // Si ce n'est pas une route protégée, continuer normalement
+  if (!isProtectedPath) {
+    return NextResponse.next()
   }
 
-  const res = NextResponse.next()
+  let supabaseResponse = NextResponse.next({
+    request: req,
+  })
   
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -20,23 +29,43 @@ export async function middleware(req: NextRequest) {
           return req.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => res.cookies.set(name, value, options))
+          cookiesToSet.forEach(({ name, value, options }) => req.cookies.set(name, value))
+          supabaseResponse = NextResponse.next({
+            request: req,
+          })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
         },
       },
     }
   )
 
-  try {
-    const { data: { session } } = await supabase.auth.getSession()
-    // Autres vérifications si nécessaire...
-    return res
-  } catch (error) {
-    console.error('Middleware error:', error)
-    return res
+  // IMPORTANT: Ne pas ajouter de logique entre createServerClient et getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  // Si l'utilisateur n'est pas connecté, rediriger vers la page d'accueil
+  if (!user) {
+    const redirectUrl = new URL('/', req.url)
+    redirectUrl.searchParams.set('redirectTo', req.nextUrl.pathname)
+    return NextResponse.redirect(redirectUrl)
   }
+
+  // IMPORTANT: Retourner l'objet supabaseResponse tel quel
+  return supabaseResponse
 }
 
-// Garder le matcher tel quel
 export const config = {
-  matcher: ['/dashboard/:path*', '/api-keys/:path*']
+  matcher: [
+    /*
+     * Correspondre à toutes les routes de requête sauf celles commençant par :
+     * - _next/static (fichiers statiques)
+     * - _next/image (fichiers d'optimisation d'image)
+     * - favicon.ico (fichier favicon)
+     * - *.svg, *.png, *.jpg, *.jpeg, *.gif, *.webp (fichiers d'image)
+     */
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
 }

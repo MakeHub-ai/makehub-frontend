@@ -2,12 +2,24 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import { getUserUsageLocal } from '@/lib/local-api-client';
-import type { UsageResponse, UsageItem, UsagePaginatedData } from '@/types/dashboard';
+import type { 
+  UsageResponse, 
+  UsageItem, 
+  UsagePaginatedData, 
+  GraphItem, 
+  SavingsDataItem, 
+  CostDistributionItem 
+} from '@/types/dashboard';
+import type { 
+  UserStats, 
+  Wallet, 
+  Request as ApiRequest, 
+  Transaction 
+} from '@/lib/supabase/types';
 
 // Cache management for localStorage persistence
 const CACHE_KEY = 'dashboard-data-cache';
-const CACHE_DURATION = 30 * 60 * 100000; // 30 minutes
+const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 
 interface CacheData {
   data: UsageResponse['data'];
@@ -69,6 +81,194 @@ interface DashboardDataState {
 
 const DashboardDataContext = createContext<DashboardDataState | undefined>(undefined);
 
+/**
+ * Récupère les données utilisateur depuis les API routes locales
+ */
+async function getUserUsageData(offset: number = 0): Promise<{ data: UsageResponse['data'] }> {
+  try {
+    // Récupérer toutes les données nécessaires en parallèle
+    const [userStats, wallet, requestsResponse, transactionsResponse] = await Promise.all([
+      fetch('/api/user/stats', {
+        method: 'GET',
+        credentials: 'include',
+      }).then(res => {
+        if (!res.ok) throw new Error(`Failed to fetch user stats: ${res.status}`);
+        return res.json() as Promise<UserStats>;
+      }),
+      
+      fetch('/api/user/wallet', {
+        method: 'GET',
+        credentials: 'include',
+      }).then(res => {
+        if (!res.ok) throw new Error(`Failed to fetch wallet: ${res.status}`);
+        return res.json() as Promise<Wallet>;
+      }),
+      
+      fetch(`/api/user/requests?page=1&pageSize=${20 + offset}`, {
+        method: 'GET',
+        credentials: 'include',
+      }).then(res => {
+        if (!res.ok) throw new Error(`Failed to fetch requests: ${res.status}`);
+        return res.json() as Promise<{ data: ApiRequest[]; pagination: any; }>;
+      }),
+      
+      fetch('/api/user/transactions?page=1&pageSize=100', {
+        method: 'GET',
+        credentials: 'include',
+      }).then(res => {
+        if (!res.ok) throw new Error(`Failed to fetch transactions: ${res.status}`);
+        return res.json() as Promise<{ data: Transaction[]; pagination: any; }>;
+      })
+    ]);
+
+    // Transformer les données au format attendu par le dashboard
+    const usageItems = transformRequestsToUsageItems(requestsResponse.data);
+    const graphItems = generateGraphItems(requestsResponse.data);
+    const costDistribution = generateCostDistribution(transactionsResponse.data);
+    const savingsData = generateSavingsData(transactionsResponse.data);
+    const monthlyUsage = calculateMonthlyUsage(transactionsResponse.data);
+
+    // Déterminer le type de plan
+    const isFree = wallet.balance <= 0;
+    const currentPlan = isFree ? 'Free Plan' : 'Paid Plan';
+
+    const data: UsageResponse['data'] = {
+      object: 'usage_report',
+      total_usage: monthlyUsage,
+      total_credits: wallet.balance,
+      total_requests: userStats.total_requests,
+      current_plan: currentPlan,
+      is_free_plan: isFree,
+      items: usageItems,
+      graph_items: graphItems,
+      cost_distribution: costDistribution,
+      savings_data: savingsData,
+      has_more: requestsResponse.pagination.hasNextPage,
+      next_offset: requestsResponse.pagination.hasNextPage ? offset + 20 : null,
+    };
+
+    return { data };
+  } catch (error) {
+    console.error('Error fetching user usage data:', error);
+    throw error;
+  }
+}
+
+/**
+ * Transforme les requêtes API en UsageItems
+ */
+function transformRequestsToUsageItems(requests: ApiRequest[]): UsageItem[] {
+  return requests.map(request => {
+    const cost = ((request.input_tokens || 0) * 0.0001 + (request.output_tokens || 0) * 0.0002);
+    
+    return {
+      id: request.request_id,
+      timestamp: request.created_at,
+      type: request.status === 'completed' ? 'API Call' : 'Failed Request',
+      units: `$${cost.toFixed(4)}`,
+      description: `${request.provider}/${request.model}`,
+      metadata: {
+        transaction_type: 'debit',
+        details: {
+          model: request.model,
+          provider: request.provider,
+          input_tokens: request.input_tokens,
+          output_tokens: request.output_tokens,
+          status: request.status,
+          error: request.error_message,
+        }
+      }
+    };
+  });
+}
+
+/**
+ * Génère les éléments graphiques depuis les requêtes
+ */
+function generateGraphItems(requests: ApiRequest[]): GraphItem[] {
+  const modelCounts: { [key: string]: number } = {};
+  
+  requests.forEach(request => {
+    if (request.status === 'completed') {
+      const key = `${request.provider}/${request.model}`;
+      modelCounts[key] = (modelCounts[key] || 0) + 1;
+    }
+  });
+
+  return Object.entries(modelCounts).map(([model, count], index) => ({
+    id: `graph_${index}`,
+    model,
+    usage_count: count
+  }));
+}
+
+/**
+ * Génère la distribution des coûts depuis les transactions
+ */
+function generateCostDistribution(transactions: Transaction[]): CostDistributionItem[] {
+  const costByDate: { [date: string]: { total: number; models: { [model: string]: number } } } = {};
+  
+  transactions.forEach(transaction => {
+    const date = new Date(transaction.created_at).toISOString().split('T')[0];
+    if (!costByDate[date]) {
+      costByDate[date] = { total: 0, models: {} };
+    }
+    costByDate[date].total += Math.abs(transaction.amount);
+  });
+
+  return Object.entries(costByDate).map(([date, data]) => ({
+    date,
+    total_cost: data.total,
+    models: data.models
+  })).slice(-30); // Derniers 30 jours
+}
+
+/**
+ * Génère les données d'économies
+ */
+function generateSavingsData(transactions: Transaction[]): SavingsDataItem[] {
+  const last7Days = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    return date.toISOString().split('T')[0];
+  }).reverse();
+
+  return last7Days.map(date => {
+    const dayTransactions = transactions.filter(t => 
+      new Date(t.created_at).toISOString().split('T')[0] === date
+    );
+    
+    const actualCost = dayTransactions.reduce((sum, t) => sum + Math.abs(t.amount), 0);
+    const maxCost = actualCost * 1.3; // Assume 30% savings
+    
+    return {
+      date,
+      actual_cost: actualCost,
+      max_cost: maxCost,
+      savings: maxCost - actualCost,
+      count: dayTransactions.length
+    };
+  });
+}
+
+/**
+ * Calcule l'utilisation mensuelle
+ */
+function calculateMonthlyUsage(transactions: Transaction[]): number {
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+  
+  return transactions
+    .filter(transaction => {
+      const transactionDate = new Date(transaction.created_at);
+      return transactionDate.getMonth() === currentMonth && 
+             transactionDate.getFullYear() === currentYear &&
+             transaction.amount < 0; // Seulement les transactions de débit
+    })
+    .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0);
+}
+
 export function DashboardDataProvider({ children }: { children: React.ReactNode }) {
   const { session, user } = useAuth();
   const [usageData, setUsageData] = useState<UsageResponse['data'] | null>(null);
@@ -108,7 +308,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       }
       setError(null);
       
-      const response = await getUserUsageLocal(0);
+      const response = await getUserUsageData(0);
 
       // Save to cache for persistence across page refreshes
       saveToCache(response.data, user?.id);
@@ -154,7 +354,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         throw new Error('No authenticated user');
       }
 
-      const response = await getUserUsageLocal(0);
+      const response = await getUserUsageData(0);
 
       // Save to cache for persistence
       saveToCache(response.data, user?.id);
@@ -177,8 +377,6 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       setIsRefreshing(false);
     }
   }, [user?.id, isRefreshing]);
-
-  // Removed automatic refresh on window focus per user request
 
   const value: DashboardDataState = {
     usageData,

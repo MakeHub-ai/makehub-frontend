@@ -2,22 +2,33 @@
 
 import { createContext, useContext, useEffect, useState } from 'react'
 import { User, Session } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase-client'
+import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
 interface AuthContextType {
   user: User | null
   session: Session | null
   loading: boolean
+  signOut: () => Promise<void>
+  signInWithEmail: (email: string, password: string) => Promise<{ error: any }>
+  signInWithGoogle: () => Promise<{ error: any }>
 }
 
-const AuthContext = createContext<AuthContextType>({ user: null, session: null, loading: true })
+const AuthContext = createContext<AuthContextType>({ 
+  user: null, 
+  session: null, 
+  loading: true,
+  signOut: async () => {},
+  signInWithEmail: async () => ({ error: null }),
+  signInWithGoogle: async () => ({ error: null })
+})
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
+  const supabase = createClient()
 
   useEffect(() => {
     const initializeAuth = async () => {
@@ -35,14 +46,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null);
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          async (_event, session) => {
+          async (event, session) => {
             console.log('Auth state change:', {
+              event,
               hasSession: !!session,
               hasAccessToken: !!session?.access_token,
             });
             setSession(session);
             setUser(session?.user ?? null);
-            router.refresh();
+            
+            // Refresh the page to update server-side auth state
+            if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+              router.refresh();
+            }
           }
         );
 
@@ -55,10 +71,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     initializeAuth();
-  }, [router]);
+  }, [router, supabase.auth]);
+
+  const signOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Sign out error:', error);
+    }
+    router.push('/');
+  };
+
+  const signInWithEmail = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    return { error };
+  };
+
+  const signInWithGoogle = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+    return { error };
+  };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      session, 
+      loading, 
+      signOut,
+      signInWithEmail,
+      signInWithGoogle
+    }}>
       {!loading && children}
     </AuthContext.Provider>
   )
