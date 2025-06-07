@@ -1,0 +1,112 @@
+---
+title: Python Integration
+description: How to integrate MakeHub with Python applications
+---
+
+# Python Integration
+
+MakeHub offers full compatibility with the OpenAI API, allowing you to easily use our services with your existing Python applications.
+
+## Installation
+
+```bash
+pip install openai
+```
+
+## Configuration
+
+```python
+from openai import OpenAI
+
+# Initialize the client with the MakeHub endpoint
+client = OpenAI(
+    api_key="YOUR_MAKEHUB_API_KEY",  # Replace with your MakeHub API key
+    base_url="https://api.makehub.ai/v1"  # MakeHub endpoint
+)
+
+# Example completion request
+response = client.chat.completions.create(
+    model="meta/llama-3-70b-instruct",  # Model available on MakeHub
+    messages=[
+        {"role": "system", "content": "You are a helpful AI assistant."},
+        {"role": "user", "content": "Explain how machine learning works in simple terms."}
+    ]
+)
+
+# Display the response
+print(response.choices[0].message.content)
+```
+
+## Streaming
+
+```python
+from openai import OpenAI
+
+# Initialize the client with the MakeHub endpoint
+client = OpenAI(
+    api_key="YOUR_MAKEHUB_API_KEY",
+    base_url="https://api.makehub.ai/v1"
+)
+
+# Example streaming request
+stream = client.chat.completions.create(
+    model="meta/llama-3-70b-instruct",
+    messages=[
+        {"role": "system", "content": "You are a helpful AI assistant."},
+        {"role": "user", "content": "Write a short poem about artificial intelligence."}
+    ],
+    stream=True
+)
+
+# Display the response as it arrives
+for chunk in stream:
+    if chunk.choices[0].delta.content is not None:
+        print(chunk.choices[0].delta.content, end="", flush=True)
+print()
+```
+
+## Function Calling
+
+```python
+from openai import OpenAI
+
+# Initialize the client with the MakeHub endpoint
+client = OpenAI(
+    api_key="YOUR_MAKEHUB_API_KEY",
+    base_url="https://api.makehub.ai/v1"
+)
+
+# Define available tools
+tools = [
+    {
+        "type": "function",
+        "function": {
+            "name": "get_weather",
+            "description": "Get the current weather for a given location",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "location": {
+                        "type": "string",
+                        "description": "The city and country, e.g. 'Paris, France'"
+                    }
+                },
+                "required": ["location"]
+            }
+        }
+    }
+]
+
+# Example request with function calling
+response = client.chat.completions.create(
+    model="openai/gpt-4o",  # A model supporting function calling
+    messages=[
+        {"role": "user", "content": "What's the weather like in Paris today?"}
+    ],
+    tools=tools
+)
+
+# Display the response
+print(response.choices[0].message.content)
+print(response.choices[0].message.tool_calls)
+```

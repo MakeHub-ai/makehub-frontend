@@ -1,0 +1,9 @@
+{
+  "python": "Python Integration",
+  "typescript": "TypeScript Integration",
+  "curl": "cURL Integration",
+  "n8n": "n8n Integration",
+  "cline": "Cline Integration",
+  "langchain": "Langchain Integration",
+  "roo": "Roo Code Integration"
+}

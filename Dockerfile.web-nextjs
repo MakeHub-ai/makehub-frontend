@@ -1,0 +1,21 @@
+FROM docker.io/library/node:22-alpine
+
+WORKDIR /app
+
+# Install pnpm using npm
+RUN npm install -g pnpm
+
+# Copy package.json and pnpm-lock.yaml first for better caching
+COPY package.json pnpm-lock.yaml* ./
+
+# Install dependencies 
+RUN pnpm install
+
+# Then copy the rest of the application
+COPY . .
+
+# Build the application
+RUN pnpm next build
+
+# Start the application
+CMD ["pnpm", "start"]

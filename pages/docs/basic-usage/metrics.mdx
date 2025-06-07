@@ -1,0 +1,210 @@
+---
+title: Real-time Metrics Endpoints
+description: Access real-time performance data for AI model providers
+---
+
+# Real-time Metrics Endpoints
+
+MakeHub provides access to real-time performance metrics for all supported AI models and providers. These metrics help you understand the current performance characteristics of different providers, which can be valuable for optimizing your routing decisions.
+
+## Metrics Endpoint
+
+You can access real-time performance metrics through the `/v1/metrics` endpoint:
+
+```
+GET https://api.makehub.ai/v1/metrics
+```
+
+### Query Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `model_id` | string | **Required**. The model ID to get metrics for (e.g., `openai/gpt-4o`) |
+| `provider_id` | string | Optional. Specific provider to get metrics for |
+| `n_last_minutes` | integer | Optional. Number of minutes to consider for metrics calculation (default: 3000) |
+
+### Response Format
+
+The response contains metrics for each provider that supports the requested model. For each provider, you'll receive the following metrics:
+
+| Metric | Description |
+|--------|-------------|
+| `avg_latency_3000min_ms` | Average initial response latency in milliseconds (over the last 3000 minutes by default) |
+| `avg_throughput_3000min_tokens_per_second` | Average throughput in tokens per second (over the last 3000 minutes by default) |
+| `last_latency_ms` | Latency of the most recent request in milliseconds |
+| `last_throughput_tokens_per_second` | Throughput of the most recent request in tokens per second |
+| `latency_variance_3000min_ms` | Variance in latency measurements (indicates stability) |
+| `throughput_variance_3000min_tokens_per_second` | Variance in throughput measurements (indicates stability) |
+| `dt_since_last_measurement_ms` | Time since the last measurement was taken in milliseconds |
+| `rtt_from_makehub_ms` | Round-trip time from MakeHub to the provider's API in milliseconds |
+
+## Example Usage
+
+### Python Example
+
+```python
+import requests
+import json
+
+# Configuration
+API_BASE_URL = "https://api.makehub.ai" 
+BEARER_TOKEN = "your_makehub_api_key"
+MODEL_ID = "openai/gpt-4o"
+N_LAST_MINUTES = 10  # Get metrics for the last 10 minutes
+
+def get_metrics(model_id, provider_id=None):
+    """Simple call to the /v1/metrics endpoint"""
+    # Build the URL
+    url = f"{API_BASE_URL}/v1/metrics?model_id={model_id}"
+    if provider_id:
+        url += f"&provider_id={provider_id}"
+    if N_LAST_MINUTES:
+        url += f"&n_last_minutes={N_LAST_MINUTES}"
+    
+    # Headers with Bearer Token
+    headers = {
+        "Authorization": f"Bearer {BEARER_TOKEN}",
+        "Content-Type": "application/json"
+    }
+    
+    # Execute GET request
+    response = requests.get(url, headers=headers)
+    
+    if response.status_code == 200:
+        return response.json()
+    else:
+        return {"error": response.text}
+
+if __name__ == "__main__":
+    result = get_metrics(MODEL_ID)
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+```
+
+### TypeScript Example
+
+```typescript
+import axios from 'axios';
+
+async function getMetrics(modelId: string, providerId?: string, nLastMinutes?: number) {
+  // Build the URL with query parameters
+  let url = `https://api.makehub.ai/v1/metrics?model_id=${modelId}`;
+  if (providerId) {
+    url += `&provider_id=${providerId}`;
+  }
+  if (nLastMinutes) {
+    url += `&n_last_minutes=${nLastMinutes}`;
+  }
+
+  // Make the request
+  try {
+    const response = await axios.get(url, {
+      headers: {
+        'Authorization': `Bearer your_makehub_api_key`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching metrics:', error);
+    return { error: error.message };
+  }
+}
+
+// Example usage
+getMetrics('openai/gpt-4o', undefined, 10)
+  .then(data => console.log(JSON.stringify(data, null, 2)));
+```
+
+### cURL Example
+
+```bash
+curl "https://api.makehub.ai/v1/metrics?model_id=openai/gpt-4o&n_last_minutes=10" \
+  -H "Authorization: Bearer your_makehub_api_key" \
+  -H "Content-Type: application/json"
+```
+
+## Sample Response
+
+Here's an example of what the response might look like for the model `openai/gpt-4o`:
+
+```json
+{
+  "azure-aoai": {
+    "avg_latency_3000min_ms": 992.87,
+    "avg_throughput_3000min_tokens_per_second": 99.92,
+    "dt_since_last_measurement_ms": 20737.39,
+    "last_latency_ms": 524.75,
+    "last_throughput_tokens_per_second": 74.07,
+    "latency_variance_3000min_ms": 57459061.50,
+    "rtt_from_makehub_ms": 70.34,
+    "throughput_variance_3000min_tokens_per_second": 1418.82
+  },
+  "azure-eastus2": {
+    "avg_latency_3000min_ms": 786.43,
+    "avg_throughput_3000min_tokens_per_second": 93.21,
+    "dt_since_last_measurement_ms": 19895.76,
+    "last_latency_ms": 597.00,
+    "last_throughput_tokens_per_second": 98.80,
+    "latency_variance_3000min_ms": 13982901.08,
+    "rtt_from_makehub_ms": null,
+    "throughput_variance_3000min_tokens_per_second": 1510.09
+  },
+  "azure-francecentral": {
+    "avg_latency_3000min_ms": 570.10,
+    "avg_throughput_3000min_tokens_per_second": 88.45,
+    "dt_since_last_measurement_ms": 19895.00,
+    "last_latency_ms": 517.34,
+    "last_throughput_tokens_per_second": 81.32,
+    "latency_variance_3000min_ms": 114192.80,
+    "rtt_from_makehub_ms": 85.38,
+    "throughput_variance_3000min_tokens_per_second": 266.00
+  },
+  "azure-swedencentral": {
+    "avg_latency_3000min_ms": 590.05,
+    "avg_throughput_3000min_tokens_per_second": 101.40,
+    "dt_since_last_measurement_ms": 19894.22,
+    "last_latency_ms": 711.30,
+    "last_throughput_tokens_per_second": 70.82,
+    "latency_variance_3000min_ms": 478525.62,
+    "rtt_from_makehub_ms": 97.18,
+    "throughput_variance_3000min_tokens_per_second": 829.45
+  },
+  "openai": {
+    "avg_latency_3000min_ms": 24571.52,
+    "avg_throughput_3000min_tokens_per_second": 63.32,
+    "dt_since_last_measurement_ms": 30.16,
+    "last_latency_ms": 47029.82,
+    "last_throughput_tokens_per_second": 38.62,
+    "latency_variance_3000min_ms": 19706887504.74,
+    "rtt_from_makehub_ms": 3.01,
+    "throughput_variance_3000min_tokens_per_second": 2211.73
+  }
+  ...
+}
+```
+
+## Using Metrics Data
+
+Use the metrics to dynamically adjust your routing strategy based on current conditions.
+
+```python
+def select_best_provider(model_id, optimization_goal='latency'):
+    metrics = get_metrics(model_id)
+    
+    best_provider = None
+    best_value = float('inf') if optimization_goal == 'latency' else 0
+    
+    for provider, provider_metrics in metrics.items():
+        if optimization_goal == 'latency':
+            current_value = provider_metrics.get('last_latency_ms', float('inf'))
+            if current_value < best_value:
+                best_value = current_value
+                best_provider = provider
+        elif optimization_goal == 'throughput':
+            current_value = provider_metrics.get('last_throughput_tokens_per_second', 0)
+            if current_value > best_value:
+                best_value = current_value
+                best_provider = provider
+    
+    return best_provider

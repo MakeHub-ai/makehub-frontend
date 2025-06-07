@@ -1,0 +1,191 @@
+---
+title: Adding Performance Constraints
+description: Optimize your requests with latency and throughput constraints
+---
+
+# Adding Performance Constraints
+
+MakeHub allows you to optimize your requests based on specific performance requirements. By adding performance constraints to your requests, you can ensure that your API calls are routed to providers that meet your latency and throughput needs.
+
+## Available Performance Constraints
+
+MakeHub supports two primary performance constraints:
+
+1. **`max_latency`**: The maximum acceptable response time (in milliseconds)
+2. **`min_throughput`**: The minimum acceptable throughput (in tokens per second)
+
+## Using the "best" Value
+
+For each constraint, you can either:
+
+- Specify a numeric value (e.g., `max_latency: 500` for a maximum of 500ms latency)
+- Use the special value `"best"` to automatically route to the provider with the best performance for that metric
+
+When you use `"best"`, MakeHub will analyze real-time performance data across all compatible providers and route your request to the one with the lowest latency or highest throughput, depending on which constraint you're optimizing for.
+
+## Examples
+
+### Python Example
+
+```python
+import openai
+
+client = openai.OpenAI(
+    api_key="your_makehub_api_key",
+    base_url="https://api.makehub.ai/v1"
+)
+
+# Example 1: Route to the provider with the lowest latency
+response = client.chat.completions.create(
+    model="openai/gpt-4",
+    messages=[
+        {"role": "user", "content": "Explain quantum computing in simple terms"}
+    ],
+    extra_query={
+        "max_latency": "best"  # Route to provider with lowest latency
+    }
+)
+
+# Example 2: Route to the provider with the highest throughput
+response = client.chat.completions.create(
+    model="anthropic/claude-3-opus",
+    messages=[
+        {"role": "user", "content": "Write a short story about space exploration"}
+    ],
+    extra_query={
+        "min_throughput": "best"  # Route to provider with highest throughput
+    }
+)
+
+# Example 3: Combine both constraints
+response = client.chat.completions.create(
+    model="mistral/mistral-large",
+    messages=[
+        {"role": "user", "content": "Summarize the history of artificial intelligence"}
+    ],
+    extra_query={
+        "max_latency": "best",    # Lowest latency
+        "min_throughput": "best"  # Highest throughput
+    }
+)
+
+# Example 4: Specify numeric constraints
+response = client.chat.completions.create(
+    model="openai/gpt-4",
+    messages=[
+        {"role": "user", "content": "Provide tips for improving code efficiency"}
+    ],
+    extra_query={
+        "max_latency": 300,    # Maximum 300ms latency
+        "min_throughput": 15   # Minimum 15 tokens per second
+    }
+)
+```
+
+### TypeScript Example
+
+```typescript
+import OpenAI from "openai";
+
+const client = new OpenAI({
+  apiKey: "your_makehub_api_key",
+  baseURL: "https://api.makehub.ai/v1"
+});
+
+async function main() {
+  // Example 1: Route to the provider with the lowest latency
+  const response1 = await client.chat.completions.create({
+    model: "openai/gpt-4",
+    messages: [
+      {role: "user", content: "Explain quantum computing in simple terms"}
+    ],
+    extra_query: {
+      max_latency: "best"  // Route to provider with lowest latency
+    }
+  });
+  
+  // Example 2: Route to the provider with the highest throughput
+  const response2 = await client.chat.completions.create({
+    model: "anthropic/claude-3-opus",
+    messages: [
+      {role: "user", content: "Write a short story about space exploration"}
+    ],
+    extra_query: {
+      min_throughput: "best"  // Route to provider with highest throughput
+    }
+  });
+  
+  // Example 3: Combine both constraints
+  const response3 = await client.chat.completions.create({
+    model: "mistral/mistral-large",
+    messages: [
+      {role: "user", content: "Summarize the history of artificial intelligence"}
+    ],
+    extra_query: {
+      max_latency: "best",    // Lowest latency
+      min_throughput: "best"  // Highest throughput
+    }
+  });
+  
+  // Example 4: Specify numeric constraints
+  const response4 = await client.chat.completions.create({
+    model: "openai/gpt-4",
+    messages: [
+      {role: "user", content: "Provide tips for improving code efficiency"}
+    ],
+    extra_query: {
+      max_latency: 300,    // Maximum 300ms latency
+      min_throughput: 15   // Minimum 15 tokens per second
+    }
+  });
+}
+
+main();
+```
+
+### cURL Example
+
+```bash
+# Example with "best" latency
+curl https://api.makehub.ai/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_makehub_api_key" \
+  -d '{
+    "model": "openai/gpt-4",
+    "messages": [
+      {"role": "user", "content": "Explain quantum computing in simple terms"}
+    ],
+    "extra_query": {
+      "max_latency": "best"
+    }
+  }'
+
+# Example with numeric constraints
+curl https://api.makehub.ai/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_makehub_api_key" \
+  -d '{
+    "model": "anthropic/claude-3-opus",
+    "messages": [
+      {"role": "user", "content": "Write a short story about space exploration"}
+    ],
+    "extra_query": {
+      "max_latency": 300,
+      "min_throughput": 15
+    }
+  }'
+```
+
+## How Constraint Resolution Works
+
+When multiple constraints are specified, MakeHub will:
+
+1. Filter providers that meet all numeric constraints (if specified)
+2. For "best" constraints, rank the remaining providers based on their performance
+3. If multiple "best" constraints are specified (e.g., both latency and throughput), MakeHub will find the optimal balance between them
+
+This process ensures that your requests are always routed to providers that best meet your performance requirements.
+
+## Performance Monitoring
+
+To monitor the real-time performance of different providers, check out the [Real-time Metrics Endpoints](/docs/basic-usage/metrics) section. This can help you make informed decisions about which constraints to apply to your requests.

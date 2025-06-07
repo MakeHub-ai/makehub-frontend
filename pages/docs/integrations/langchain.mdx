@@ -1,0 +1,87 @@
+---
+title: Langchain Integration
+description: How to integrate MakeHub with Langchain framework
+---
+
+# Langchain Integration
+
+[Langchain](https://www.langchain.com/) is a popular framework for developing applications powered by language models. MakeHub can be easily integrated with Langchain by using the OpenAI LLM interface with a custom base URL.
+
+## Getting Started
+
+To use MakeHub with Langchain, you'll need to install the Langchain library and OpenAI dependencies:
+
+```bash
+pip install langchain openai
+```
+
+## Using MakeHub in Langchain
+
+You can integrate MakeHub as a model provider in your Langchain applications by configuring the OpenAI LLM with MakeHub's API endpoint:
+
+```python
+from langchain.llms import OpenAI
+from langchain.chains import LLMChain
+from langchain.prompts import PromptTemplate
+
+# Initialize OpenAI LLM with MakeHub endpoint
+llm = OpenAI(
+    model_name="gpt-4o",  # Specify the model you want to use
+    openai_api_key="your_makehub_api_key",
+    openai_api_base="https://api.makehub.ai/v1"  # Point to MakeHub API
+)
+
+# Create a prompt template
+prompt = PromptTemplate(
+    input_variables=["question"],
+    template="Answer the following question: {question}"
+)
+
+# Create a chain
+chain = LLMChain(llm=llm, prompt=prompt)
+
+# Run the chain
+response = chain.run("What is the capital of France?")
+print(response)
+```
+
+## Advanced Configuration
+
+You can specify additional parameters when initializing the LLM:
+
+```python
+llm = OpenAI(
+    model_name="gpt-4o",
+    openai_api_key="your_makehub_api_key",
+    openai_api_base="https://api.makehub.ai/v1",
+    temperature=0.7,
+    max_tokens=1000,
+    # Add routing preferences in headers if needed
+    # This feature is coming soon
+)
+```
+
+## Direct MakeHub Integration
+
+A pull request to add direct MakeHub integration to Langchain is currently in progress. Once merged, you'll be able to use MakeHub directly with:
+
+```python
+from langchain.llms import MakeHub
+
+llm = MakeHub(
+    api_key="your_makehub_api_key",
+    model_name="openai/gpt-4o",
+    routing_strategy="cost-efficient"
+)
+```
+
+We'll update this documentation once the integration is available.
+
+## Benefits of Using MakeHub with Langchain
+
+- **Model Flexibility**: Easily switch between different AI models without changing your code
+- **Intelligent Routing**: Let MakeHub choose the best model based on your requirements
+- **Unified API**: Consistent interface across multiple AI providers
+- **Cost Optimization**: Automatically route to cost-efficient models when appropriate
+
+For more information on available options and advanced usage, refer to the Langchain documentation.

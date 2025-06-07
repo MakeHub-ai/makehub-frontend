@@ -1,0 +1,105 @@
+---
+title: Quick Start
+description: Start using MakeHub in minutes with these simple examples
+---
+
+# Quick Start
+
+This guide will help you get up and running with MakeHub quickly. You'll learn how to create an API key and make your first API calls using different programming languages.
+
+## Create Your API Key
+
+Before making any API calls, you'll need to create an API key:
+
+1. Log in to your account at [makehub.ai](https://makehub.ai)
+2. Navigate to [makehub.ai/api-keys](https://makehub.ai/api-keys)
+3. Click "Create New API Key"
+4. Give your key a descriptive name
+5. Copy and securely store your API key
+
+## Making API Calls
+
+MakeHub is designed as a drop-in replacement for the OpenAI API. This means you can use the OpenAI client libraries you're already familiar with - just point them to MakeHub's API endpoint instead.
+
+### Python Example
+
+```python
+import openai
+
+# Initialize the client with your MakeHub API key
+client = openai.OpenAI(
+    api_key="your_makehub_api_key",
+    base_url="https://api.makehub.ai/v1"
+)
+
+# Create a chat completion request
+response = client.chat.completions.create(
+    model="openai/gpt-4",  # Format: provider/model
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "What are the benefits of using a routing platform for AI models?"}
+    ]
+)
+
+# Print the response
+print(response.choices[0].message.content)
+```
+
+### TypeScript Example
+
+```typescript
+import OpenAI from "openai";
+
+// Initialize the client with your MakeHub API key
+const client = new OpenAI({
+  apiKey: "your_makehub_api_key",
+  baseURL: "https://api.makehub.ai/v1"
+});
+
+async function main() {
+  // Create a chat completion request
+  const response = await client.chat.completions.create({
+    model: "openai/gpt-4",  // Format: provider/model
+    messages: [
+      {role: "system", content: "You are a helpful assistant."},
+      {role: "user", content: "What are the benefits of using a routing platform for AI models?"}
+    ]
+  });
+  
+  // Print the response
+  console.log(response.choices[0].message.content);
+}
+
+main();
+```
+
+### cURL Example
+
+```bash
+curl https://api.makehub.ai/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_makehub_api_key" \
+  -d '{
+    "model": "openai/gpt-4",
+    "messages": [
+      {"role": "system", "content": "You are a helpful assistant."},
+      {"role": "user", "content": "What are the benefits of using a routing platform for AI models?"}
+    ]
+  }'
+```
+
+## How Routing Works
+
+When you make a request without specifying any additional constraints, MakeHub will automatically route your request to the most cost-effective provider. If that provider is unavailable (due to downtime, rate limits, or other issues), MakeHub will automatically fall back to alternative providers to ensure your request is fulfilled.
+
+For more details on the routing mechanism, see the [How Routing Works](/docs/basic-usage/routing) section.
+
+## Model Naming Convention
+
+When using MakeHub, you need to specify both the provider and the model name using the format `provider/model`. For example:
+
+- `openai/gpt-4o`
+- `anthropic/claude-3-opus`
+- `mistral/mistral-large`
+
+For a complete list of supported models and providers, visit [makehub.ai/models](https://makehub.ai/models).

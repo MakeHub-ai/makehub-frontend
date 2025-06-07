@@ -1,0 +1,93 @@
+---
+title: Getting Started with MakeHub
+description: Set up your account and start using MakeHub in minutes
+---
+
+# Getting Started with MakeHub
+
+This guide will help you set up your MakeHub account and make your first API call. Follow these simple steps to get started with intelligent model routing in just a few minutes.
+
+## Creating an Account
+
+1. Visit [makehub.ai](https://makehub.ai) and click on "Sign Up"
+2. Complete the registration form with your details
+3. Verify your email address to activate your account
+
+## Generating Your API Key
+
+1. Log in to your MakeHub account
+2. Navigate to [makehub.ai/api-keys](https://makehub.ai/api-keys)
+3. Click "Create New API Key"
+4. Give your key a descriptive name (e.g., "Development", "Production")
+5. Copy your new API key and store it securely - you won't be able to view the full key again
+
+## Setting Up Your Environment
+
+MakeHub is designed to be a drop-in replacement for OpenAI's API. This means you can use your existing OpenAI client library and simply change the base URL to point to MakeHub.
+
+### Python Setup
+
+```python
+import openai
+
+# Configure the client with your MakeHub API key
+client = openai.OpenAI(
+    api_key="your_makehub_api_key",
+    base_url="https://api.makehub.ai/v1"  # Use MakeHub instead of OpenAI
+)
+
+# Make requests as usual
+response = client.chat.completions.create(
+    model="openai/gpt-4",  # Specify provider/model
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Hello, who are you?"}
+    ]
+)
+
+print(response.choices[0].message.content)
+```
+
+### TypeScript Setup
+
+```typescript
+import OpenAI from "openai";
+
+// Configure the client with your MakeHub API key
+const client = new OpenAI({
+  apiKey: "your_makehub_api_key",
+  baseURL: "https://api.makehub.ai/v1"  // Use MakeHub instead of OpenAI
+});
+
+// Make requests as usual
+async function main() {
+  const response = await client.chat.completions.create({
+    model: "openai/gpt-4",  // Specify provider/model
+    messages: [
+      {role: "system", content: "You are a helpful assistant."},
+      {role: "user", content: "Hello, who are you?"}
+    ]
+  });
+  
+  console.log(response.choices[0].message.content);
+}
+
+main();
+```
+
+## Making Your First API Call
+
+When making API calls through MakeHub, you'll notice that the model name format includes the provider name as a prefix (e.g., `openai/gpt-4`, `anthropic/claude-3-opus`). This helps MakeHub identify which provider to route your request to.
+
+By default, if you don't specify any additional constraints, MakeHub will route your request to the most cost-effective provider that can fulfill your request.
+
+## Next Steps
+
+Now that you've set up your account and made your first API call, you can:
+
+- Learn about [adding performance constraints](/docs/basic-usage/performance) to optimize routing
+- Discover how to [restrict requests to specific providers](/docs/basic-usage/providers)
+- Understand [how routing works](/docs/basic-usage/routing) behind the scenes
+- Explore the [real-time metrics](/docs/basic-usage/metrics) available for all providers
+
+For a more comprehensive guide, check out our [Quick Start](/docs/basic-usage/quick-start) section.

@@ -1,0 +1,273 @@
+---
+title: Native Tools Calling
+description: Understanding which models and providers natively support tools and function calling
+---
+
+# Native Tools Calling
+
+This guide provides an overview of which providers and models natively support tool calling capabilities. The information is organized by provider to help you choose the right model for your needs.
+
+## Models with Native Support
+
+The MakeHub API includes information about native tool calling capabilities in the model metadata. You can use the `/v1/models` endpoint to identify which models support these features natively.
+
+## Filtering Models by Capability
+
+You can use the model information to filter models based on specific capabilities:
+
+```python
+def find_models_with_tools_calling():
+    models_data = list_models()
+    
+    tools_calling_models = [
+        model for model in models_data["data"] 
+        if model.get("native_support_tools_calling", False)
+    ]
+    
+    return tools_calling_models
+
+# Find models that support both tool calling and streaming
+def find_streaming_tool_calling_models():
+    models_data = list_models()
+    
+    filtered_models = [
+        model for model in models_data["data"] 
+        if model.get("native_support_tools_calling", False) and 
+           model.get("streaming_tool_calling_support", False)
+    ]
+    
+    return filtered_models
+```
+
+## Providers and Their Tool Calling Support
+
+Below is a comprehensive overview of providers and their models, showing which ones support tool calling capabilities and which don't.
+
+### Anthropic
+
+| Model | Tool Calling | Streaming Tool Calling |
+|-------|-------------|------------------------|
+| claude-3-5-haiku | ✅ | ✅ |
+| claude-3-5-sonnet | ✅ | ✅ |
+| claude-3-7-sonnet | ✅ | ✅ |
+
+### Azure
+
+| Model | Tool Calling | Streaming Tool Calling |
+|-------|-------------|------------------------|
+| gpt-4o | ✅ | ✅ |
+| gpt-4o-mini* | ✅ | ✅ |
+
+*Available in UKSouth, norwayeast, swedencentral, switzerlandnorth regions
+
+### Bedrock
+
+| Model | Tool Calling | Streaming Tool Calling |
+|-------|-------------|------------------------|
+| claude-3-5-haiku | ✅ | ✅ |
+| claude-3-5-sonnet | ✅ | ✅ |
+| claude-3-7-sonnet | ✅ | ✅ |
+
+### CentML
+
+| Model | Tool Calling | Streaming Tool Calling |
+|-------|-------------|------------------------|
+| deepseek-R1-fp8 | ❌ | ❌ |
+| Llama-3.3-70B-fp16 | ✅ | ✅ |
+
+### Cerebras
+
+| Model | Tool Calling | Streaming Tool Calling |
+|-------|-------------|------------------------|
+| Llama-3.1-8B-fp16 | ✅ | ✅ |
+| Llama-3.3-70B-fp16 | ✅ | ✅ |
+
+### ChutesAI
+
+| Model | Tool Calling | Streaming Tool Calling |
+|-------|-------------|------------------------|
+| deepseek-V3-0324-fp8 | ✅ | ❌ |
+
+### DeepInfra
+
+| Model | Tool Calling | Streaming Tool Calling |
+|-------|-------------|------------------------|
+| deepseek-R1-distill-llama-70b-fp16 | ❌ | ❌ |
+| deepseek-R1-fp8 | ✅ | ✅ |
+| deepseek-V3-0324-fp8 | ✅ | ❌ |
+| deepseek-V3-fp8 | ✅ | ❌ |
+| gemma-2-9b-fp16 | ❌ | ❌ |
+| gemma-3-27B | ❌ | ❌ |
+| Llama-3.1-70B-fp16 | ✅ | ✅ |
+| Llama-3.1-8B-fp16 | ✅ | ✅ |
+| Llama-3.1-8B-fp8 | ✅ | ✅ |
+| Llama-3.3-70B-fp16 | ✅ | ✅ |
+| Llama-3.3-70B-fp8 | ✅ | ✅ |
+| mistral-small-24B-fp8 | ❌ | ❌ |
+| open-mistral-nemo | ❌ | ❌ |
+| QWQ-32B-fp8 | ❌ | ❌ |
+| Qwen2.5-Coder-32B | ❌ | ❌ |
+
+### Deepseek
+
+| Model | Tool Calling | Streaming Tool Calling |
+|-------|-------------|------------------------|
+| deepseek-R1-fp8 | ❌ | ❌ |
+| deepseek-V3-fp8 | ✅ | ✅ |
+
+### Fireworks
+
+| Model | Tool Calling | Streaming Tool Calling |
+|-------|-------------|------------------------|
+| deepseek-R1-fp8 | ❌ | ❌ |
+| deepseek-V3-0324-fp8 | ✅ | ✅ |
+| deepseek-V3-fp8 | ✅ | ✅ |
+| Llama-3.1-70B-fp16 | ✅ | ✅ |
+| Llama-3.1-8B-fp16 | ❌ | ❌ |
+| Llama-3.3-70B-fp16 | ❌ | ❌ |
+| mistral-small-24B-fp16 | ❌ | ❌ |
+| QWQ-32b-fp16 | ❌ | ❌ |
+| Qwen2.5-Coder-32B | ❌ | ❌ |
+
+### Google
+
+| Model | Tool Calling | Streaming Tool Calling |
+|-------|-------------|------------------------|
+| gemini-2.0-flash | ❌ | ❌ |
+| gemini-2.0-flash-lite-preview | ✅ | ✅ |
+| gemini-2.0-flash-thinking | ❌ | ❌ |
+| gemini-2.5-pro-exp-03-25 | ✅ | ✅ |
+
+### Groq
+
+| Model | Tool Calling | Streaming Tool Calling |
+|-------|-------------|------------------------|
+| Llama-3.3-70B-fp16 | ✅ | ✅ |
+
+### Hyperbolic
+
+| Model | Tool Calling | Streaming Tool Calling |
+|-------|-------------|------------------------|
+| deepseek-R1-fp8 | ✅ | ✅ |
+| deepseek-V3-0324-fp8 | ✅ | ✅ |
+| deepseek-V3-fp8 | ✅ | ✅ |
+| Llama-3.1-70B-fp16 | ✅ | ✅ |
+| Llama-3.1-8B-fp16 | ✅ | ✅ |
+| Llama-3.3-70B-fp16 | ✅ | ✅ |
+| QWQ-32b-fp16 | ❌ | ❌ |
+
+### Leptonai
+
+| Model | Tool Calling | Streaming Tool Calling |
+|-------|-------------|------------------------|
+| Llama-3.1-70B-fp8 | ✅ | ❌ |
+| Llama-3.1-8B-fp8 | ✅ | ❌ |
+| Llama-3.3-70B-fp8 | ✅ | ❌ |
+
+### Mistral
+
+| Model | Tool Calling | Streaming Tool Calling |
+|-------|-------------|------------------------|
+| mistral-small-24B-fp16 | ✅ | ❌ |
+| open-mistral-nemo | ✅ | ❌ |
+
+### Nebius-base
+
+| Model | Tool Calling | Streaming Tool Calling |
+|-------|-------------|------------------------|
+| deepseek-R1-fp8 | ❌ | ❌ |
+| deepseek-V3-0324-fp8 | ❌ | ❌ |
+| deepseek-V3-fp8 | ❌ | ❌ |
+| Llama-3.1-70B-fp16 | ✅ | ✅ |
+| Llama-3.1-8B-fp16 | ✅ | ✅ |
+| open-mistral-nemo | ❌ | ❌ |
+| QWQ-32b-fp16 | ❌ | ❌ |
+
+### Nebius-fast
+
+| Model | Tool Calling | Streaming Tool Calling |
+|-------|-------------|------------------------|
+| deepseek-R1-fp8 | ❌ | ❌ |
+| deepseek-V3-0324-fp8 | ❌ | ❌ |
+| Llama-3.1-70B-fp16 | ✅ | ✅ |
+| Llama-3.1-8B-fp16 | ✅ | ✅ |
+| open-mistral-nemo | ❌ | ❌ |
+| QWQ-32b-fp16 | ❌ | ❌ |
+
+### Novitai
+
+| Model | Tool Calling | Streaming Tool Calling |
+|-------|-------------|------------------------|
+| deepseek-R1-fp8 | ✅ | ✅ |
+| deepseek-V3-fp8 | ✅ | ✅ |
+| gemma-2-9b-fp16 | ❌ | ❌ |
+| Llama-3.1-70B-fp16 | ❌ | ❌ |
+| Llama-3.1-8B-fp16 | ❌ | ❌ |
+| Llama-3.3-70B-fp16 | ✅ | ✅ |
+| mistral-7B-v0.3 | ❌ | ❌ |
+| open-mistral-nemo | ❌ | ❌ |
+
+### OpenAI
+
+| Model | Tool Calling | Streaming Tool Calling |
+|-------|-------------|------------------------|
+| gpt-3.5-turbo | ✅ | ✅ |
+| gpt-4.5 | ✅ | ✅ |
+| gpt-4o | ✅ | ✅ |
+| gpt-4o-mini | ✅ | ✅ |
+
+### Replicate
+
+| Model | Tool Calling | Streaming Tool Calling |
+|-------|-------------|------------------------|
+| claude-3-5-sonnet | ✅ | ✅ |
+
+### Sambanova
+
+| Model | Tool Calling | Streaming Tool Calling |
+|-------|-------------|------------------------|
+| deepseek-R1-distill-llama-70b-fp16 | ❌ | ❌ |
+| deepseek-R1-fp8 | ❌ | ❌ |
+| deepseek-V3-0324-fp8 | ❌ | ❌ |
+| Llama-3.1-8B-fp16 | ✅ | ✅ |
+| Llama-3.3-70B-fp16 | ✅ | ✅ |
+
+### Together
+
+| Model | Tool Calling | Streaming Tool Calling |
+|-------|-------------|------------------------|
+| deepseek-R1-fp8 | ✅ | ❌ |
+| deepseek-V3-fp8 | ✅ | ❌ |
+| MythoMax-L2-13b-fp16 | ✅ | ❌ |
+| Llama-3.1-70B-fp8 | ✅ | ✅ |
+| Llama-3.1-8B-fp8 | ✅ | ✅ |
+| Llama-3.3-70B-fp8 | ✅ | ✅ |
+| mistral-small-24B-fp16 | ✅ | ❌ |
+| QWQ-32b-fp16 | ✅ | ✅ |
+| Qwen2.5-Coder-32B | ✅ | ✅ |
+
+### XAI
+
+| Model | Tool Calling | Streaming Tool Calling |
+|-------|-------------|------------------------|
+| grok-2 | ✅ | ✅ |
+| grok-beta | ✅ | ✅ |
+
+## Benefits of Native Support
+
+Models with native support for tool calling typically offer:
+
+1. Better parsing of tool arguments
+2. More reliable adherence to tool schemas
+3. Optimized performance for tool-use scenarios
+4. Reduced likelihood of hallucinated parameters
+
+When building applications that require tool calling, choosing models with native support can lead to more robust and predictable behavior.
+
+## Usage Considerations
+
+When using tool calling capabilities:
+- Regular tool calling is suitable for most applications where immediate response streaming isn't required
+- Streaming tool calling is ideal for interactive applications where real-time responses enhance user experience
+- Consider your specific use case requirements when choosing between regular and streaming implementations
+- Models marked with ❌ either don't support tool calling or failed during testing

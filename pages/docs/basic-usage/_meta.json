@@ -1,0 +1,9 @@
+{
+  "quick-start": "Quick Start",
+  "routing": "How Routing Works",
+  "providers": "Restrain to Specific Providers",
+  "performance": "Adding Performance Constraints",
+  "versions": "Select a Specific Version",
+  "metrics": "Real-time Metrics",
+  "native-tool-calling-support": "Native Tool Calling Support"
+}

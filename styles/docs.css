@@ -1,0 +1,86 @@
+/* Documentation-specific styles */
+.docs-content {
+  scroll-behavior: smooth;
+}
+
+.docs-content h1,
+.docs-content h2,
+.docs-content h3,
+.docs-content h4 {
+  scroll-margin-top: 100px;
+}
+
+.docs-content h2::before,
+.docs-content h3::before {
+  content: '';
+  display: block;
+  height: 100px;
+  margin-top: -100px;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Anchor links */
+.heading-anchor {
+  opacity: 0;
+  color: theme('colors.indigo.400');
+  transition: opacity 0.2s;
+  margin-left: 0.5rem;
+}
+
+.docs-content h2:hover .heading-anchor,
+.docs-content h3:hover .heading-anchor {
+  opacity: 1;
+}
+
+/* Typography refinements */
+.docs-content p {
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.docs-content strong {
+  font-weight: 600;
+  color: theme('colors.gray.900');
+}
+
+/* Code blocks */
+.docs-content pre {
+  position: relative;
+  margin: 1.5rem 0;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+/* Tables */
+.docs-content table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+}
+
+.docs-content table th {
+  background-color: theme('colors.gray.50');
+  font-weight: 600;
+}
+
+/* Sidebar box styling */
+.docs-sidebar-box {
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background-color: white;
+  transition: box-shadow 0.2s ease-in-out;
+}
+
+.docs-sidebar-box:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Mobile menu button styling to match sidebar box */
+.docs-mobile-menu-button {
+  background-color: white;
+  border: 1px solid theme('colors.gray.200');
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}

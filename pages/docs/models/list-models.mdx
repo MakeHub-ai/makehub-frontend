@@ -1,0 +1,158 @@
+---
+title: List Models
+description: How to retrieve all available AI models through MakeHub's API
+---
+
+# List All Models
+
+MakeHub provides access to a variety of AI models from different providers. This page explains how to retrieve information about the available models and how to interpret the response data.
+
+## Listing Available Models
+
+You can retrieve a list of all available models through the `/v1/models` endpoint:
+
+```
+GET https://api.makehub.ai/v1/models
+```
+
+This endpoint requires authentication with your MakeHub API key.
+
+### Python Example
+
+```python
+import requests
+
+API_BASE_URL = "https://api.makehub.ai"
+API_KEY = "your_makehub_api_key"
+
+def list_models():
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json"
+    }
+    
+    response = requests.get(f"{API_BASE_URL}/v1/models", headers=headers)
+    
+    if response.status_code == 200:
+        return response.json()
+    else:
+        return {"error": response.text}
+
+models = list_models()
+print(models)
+```
+
+### TypeScript Example
+
+```typescript
+import axios from 'axios';
+
+async function listModels() {
+  try {
+    const response = await axios.get('https://api.makehub.ai/v1/models', {
+      headers: {
+        'Authorization': `Bearer your_makehub_api_key`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching models:', error);
+    return { error: error.message };
+  }
+}
+
+// Example usage
+listModels().then(data => console.log(data));
+```
+
+### cURL Example
+
+```bash
+curl "https://api.makehub.ai/v1/models" \
+  -H "Authorization: Bearer your_makehub_api_key" \
+  -H "Content-Type: application/json"
+```
+
+## Response Format
+
+The response contains an array of model objects under the `data` key. Each model object includes the following properties:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `model_id` | string | Unique identifier for the model (in the format `organisation/model_name`) |
+| `model_name` | string | Name of the model |
+| `organisation` | string | Organisation that created the model |
+| `provider_name` | string | Service provider hosting the model |
+| `context` | integer | Maximum context length in thousands of tokens |
+| `price_per_input_token` | number | Cost per input token in cents/1M tokens |
+| `price_per_output_token` | number | Cost per output token in cents/1M tokens |
+| `quantisation` | string or null | Quantisation level, if applicable |
+| `native_support_function_calling` | boolean | Whether the model natively supports function calling |
+| `native_support_tools_calling` | boolean | Whether the model natively supports tools calling |
+
+## Sample Response
+
+```json
+{
+  "data": [
+    {
+      "context": 200,
+      "model_id": "anthropic/claude-3-5-haiku",
+      "model_name": "claude-3-5-haiku",
+      "organisation": "anthropic",
+      "price_per_input_token": 0.8,
+      "price_per_output_token": 4,
+      "provider_name": "anthropic",
+      "quantisation": null,
+      "native_support_function_calling": true,
+      "native_support_tools_calling": true
+    },
+    {
+      "context": 200,
+      "model_id": "anthropic/claude-3-5-sonnet",
+      "model_name": "claude-3-5-sonnet",
+      "organisation": "anthropic",
+      "price_per_input_token": 3,
+      "price_per_output_token": 15,
+      "provider_name": "anthropic",
+      "quantisation": null,
+      "native_support_function_calling": true,
+      "native_support_tools_calling": true
+    },
+    {
+      "context": 131,
+      "model_id": "openai/gpt-4o",
+      "model_name": "gpt-4o",
+      "organisation": "openai",
+      "price_per_input_token": 2.5,
+      "price_per_output_token": 10,
+      "provider_name": "azure-UKSouth",
+      "quantisation": null,
+      "native_support_function_calling": true,
+      "native_support_tools_calling": true
+    }
+    // Additional models omitted for brevity
+  ]
+}
+```
+
+### Finding the Most Cost-Effective Model
+
+```python
+def find_cheapest_model_for_task(min_context_size=32, require_function_calling=False):
+    models_data = list_models()
+    
+    # Filter models based on requirements
+    eligible_models = [
+        model for model in models_data["data"] 
+        if model.get("context", 0) >= min_context_size and
+        (not require_function_calling or model.get("native_support_function_calling", False))
+    ]
+    
+    # Sort by output token price (most common cost driver)
+    eligible_models.sort(key=lambda x: x.get("price_per_output_token", float('inf')))
+    
+    return eligible_models[0] if eligible_models else None
+```

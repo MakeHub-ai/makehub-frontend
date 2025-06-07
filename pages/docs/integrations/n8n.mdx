@@ -1,0 +1,79 @@
+---
+title: n8n Integration
+description: How to integrate MakeHub with n8n workflow automation platform
+---
+
+# n8n Integration
+
+[n8n](https://n8n.io/) is a workflow automation platform that enables connecting various services. This guide explains different methods to integrate MakeHub AI's LLM capabilities with n8n workflows.
+
+## Method 1: Using OpenAI Node with Custom Base URL
+
+The simplest way to use MakeHub in n8n is through the built-in OpenAI node with a modified base URL:
+
+1. Add an **OpenAI** node to your workflow
+2. Configure your credentials with:
+   - **Base URL**: `https://api.makehub.ai/v1`
+   - **API Key**: Your MakeHub API key
+3. Select your operation and model as you would with OpenAI
+4. Configure your request parameters (prompt, temperature, etc.)
+
+This method leverages MakeHub's API compatibility with OpenAI's interface.
+
+## Method 2: Using MakeHub Custom Node
+
+For advanced features including performance controls and updated model lists, use the dedicated MakeHub node:
+
+### Installation
+
+```bash
+# Navigate to your n8n directory
+cd ~/.n8n
+
+# Install the MakeHub node
+npm install n8n-nodes-makehub
+```
+
+Alternatively, you can install it through the n8n interface:
+1. Navigate to **Settings** > **Community Nodes**
+2. Click **Install a Community Node**
+3. Enter `n8n-nodes-makehub` in the package name field
+4. Click **Install**
+
+### Configuration
+
+1. Add the **MakeHub AI** node to your workflow
+2. Create new credentials with your MakeHub API key
+3. Select a model from the dynamically loaded model list
+4. Configure message content and parameters
+5. Set performance settings:
+   - **Min Throughput Mode**: Control token generation speed (tokens/sec)
+   - **Max Latency Mode**: Control maximum latency (ms)
+
+### Performance Optimization
+
+The MakeHub node offers three performance modes:
+- **Best Price**: Most economical option
+- **Custom Value**: Manually set throughput/latency values
+- **Best Performance**: Optimized for speed (higher cost)
+
+## Method 3: Direct Integration (Coming Soon)
+
+The MakeHub team is working on a pull request to natively integrate MakeHub capabilities into n8n's core. This will provide deeper integration without requiring custom node installation.
+
+## Example Workflow
+
+Here's a simple workflow example:
+
+1. **HTTP Request** (Trigger) → Receives a prompt from an external source
+2. **MakeHub AI** → Processes the prompt with your chosen AI model
+3. **Function** → Parses and processes the AI response
+4. **Send Email** → Delivers the results
+
+## Troubleshooting
+
+- Ensure your API key has sufficient credits
+- Check network connectivity to api.makehub.ai
+- Verify your model selection is available in your MakeHub subscription
+
+For additional help, contact support@makehub.ai or visit the [documentation](https://makehub.ai/docs).

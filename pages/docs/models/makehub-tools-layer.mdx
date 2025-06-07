@@ -1,0 +1,91 @@
+---
+title: MakeHub Tools Layer
+description: How MakeHub enables tools and function calling for all models
+---
+
+# MakeHub Layer for Tools/Functions Calling
+
+To standardize user experience across all models, MakeHub provides a compatibility layer that enables tool and function calling for any model, even those that don't natively support these features.
+
+## Universal Tools Support
+
+MakeHub's proxy layer allows you to use a consistent interface for calling functions and tools with any model in our ecosystem. This means your applications can work with the same code regardless of which model you choose to use.
+
+## Using Proxy Tool and Function Calling
+
+For models that don't natively support function calling or tools, MakeHub provides a proxy functionality. To use this feature, append `:proxy_tool` to the model ID in your request.
+
+### Example with Proxy Tool
+
+```python
+import openai
+
+client = openai.OpenAI(
+    api_key="your_makehub_api_key",
+    base_url="https://api.makehub.ai/v1"
+)
+
+# Define your functions
+functions = [
+    {
+        "name": "get_weather",
+        "description": "Get the current weather in a location",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "location": {
+                    "type": "string",
+                    "description": "The city and state, e.g. San Francisco, CA"
+                },
+                "unit": {
+                    "type": "string",
+                    "enum": ["celsius", "fahrenheit"],
+                    "description": "The temperature unit to use"
+                }
+            },
+            "required": ["location"]
+        }
+    }
+]
+
+# Use with a model that doesn't natively support function calling
+response = client.chat.completions.create(
+    model="custom/llama-3-70b:proxy_tool",  # Note the :proxy_tool suffix
+    messages=[
+        {"role": "user", "content": "What's the weather like in Boston?"}
+    ],
+    tools=functions
+)
+
+# The response will include tool calls, even though the base model doesn't support them
+```
+
+## How It Works
+
+1. The MakeHub proxy layer intercepts your API request
+2. It formats your message and tool specifications into a prompt the underlying model can understand
+3. When the model responds, the proxy parses the output text to identify and extract function calls
+4. The response is reformatted to match the expected structure of a native function/tool calling response
+
+## Benefits of the MakeHub Layer
+
+- **Consistency**: Use the same code patterns across all models
+- **Flexibility**: Choose models based on performance or cost rather than tool-calling capabilities
+- **Future-proofing**: As new models emerge, your application's function-calling code remains stable
+- **Standardization**: Consistent error handling and parameter validation across all models
+
+## Performance Considerations
+
+While the MakeHub proxy layer makes any model compatible with tool calling, there are some considerations:
+
+1. Models with native tool support typically handle complex schemas more accurately
+2. The proxy layer adds a small amount of latency to process the response
+3. Very large tool specifications may impact context limits differently than with native support
+
+For critical applications requiring precise tool usage, consider using models with native support. For general use cases, the proxy layer provides excellent compatibility and convenience.
+
+## Next Steps
+
+- Learn about [adding performance constraints](/docs/basic-usage/performance) to your requests
+- Discover how to [restrict requests to specific providers](/docs/basic-usage/providers)
+- Understand [how routing works](/docs/basic-usage/routing) behind the scenes

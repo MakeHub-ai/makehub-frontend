@@ -1,0 +1,101 @@
+---
+title: How Routing Works
+description: Understanding MakeHub's intelligent routing mechanisms
+---
+
+# How Routing Works
+
+MakeHub's core functionality is its intelligent routing system that directs your requests to the most appropriate AI model provider based on various criteria. This page explains the routing logic in detail to help you understand how your requests are processed.
+
+## Routing Decision Process
+
+When you send a request to MakeHub, our routing engine follows this decision-making process:
+
+1. **Model Validation**: Verify that the requested model is supported
+2. **Provider Filtering**: Apply any provider restrictions specified in the request
+3. **Performance Constraint Filtering**: Apply any performance constraints (latency, throughput)
+4. **Cost Optimization**: If multiple providers remain eligible, select the most cost-effective option
+5. **Fallback Mechanism**: If the selected provider fails, try alternative providers
+
+## Fallback Mechanism
+
+If the initially selected provider fails to process the request (due to rate limits, downtime, or other errors), MakeHub will automatically attempt to route the request to alternative providers.
+
+**Important:** MakeHub applies the fallback mechanism for all error codes, except for OpenAI API errors. For OpenAI API errors, the original error is returned directly to the user without attempting to redirect to another provider.
+
+## Real-time Performance Metrics
+
+MakeHub continuously monitors the performance of all providers, collecting metrics such as:
+
+- **Latency**: Average response time for initial tokens
+- **Throughput**: Tokens generated per second
+- **Error Rates**: Percentage of requests that result in errors
+- **Availability**: Provider uptime and responsiveness
+
+These metrics are used to make informed routing decisions and are updated in real-time. You can access these metrics through our [Real-time Metrics Endpoints](/docs/basic-usage/metrics).
+
+## Cost Optimization
+
+When multiple providers meet all other criteria, MakeHub will route to the most cost-effective option. Cost calculations are based on:
+
+1. **Input Tokens**: Cost per token for the prompt
+2. **Output Tokens**: Cost per token for the generated response
+3. **Total Cost**: Combined input and output costs
+
+## Example Routing Scenarios
+
+### Scenario 1: Basic Routing
+
+Request:
+```json
+{
+  "model": "openai/gpt-4"
+}
+```
+
+Routing Logic:
+- Find all providers that offer GPT-4
+- Select the cheapest provider
+- If that provider fails, try the next cheapest provider
+
+### Scenario 2: Performance-Optimized Routing
+
+Request:
+```json
+{
+  "model": "anthropic/claude-3-opus",
+  "extra_query": {
+    "max_latency": "best"
+  }
+}
+```
+
+Routing Logic:
+- Find all providers that offer Claude 3 Opus
+- Select the provider with the lowest current latency
+- If that provider fails, there is no fallback (since we specifically requested the best latency)
+
+### Scenario 3: Complex Routing
+
+Request:
+```json
+{
+  "model": "mistral/mistral-large",
+  "extra_query": {
+    "providers": ["mistral", "openai"],
+    "max_latency": 300,
+    "min_throughput": 15
+  }
+}
+```
+
+Routing Logic:
+- Find providers that offer Mistral Large
+- Filter to only include Mistral and OpenAI
+- Further filter to providers with latency ≤ 300ms and throughput ≥ 15 tokens/sec
+- From the remaining providers, select the cheapest
+- If the first provider fails, try the second provider (if any)
+
+## Conclusion
+
+MakeHub's routing system is designed to optimize for cost, performance, and reliability while giving you the flexibility to specify your own constraints. By understanding how the routing works, you can make more informed decisions about how to configure your requests for optimal results.

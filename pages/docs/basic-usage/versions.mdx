@@ -1,0 +1,151 @@
+---
+title: Select a Specific Version for a Model
+description: How to use specific model versions instead of the latest
+---
+
+# Select a Specific Version for a Model
+
+MakeHub allows you to specify which version of a model you want to use for your requests. This is particularly useful when you need consistency in your application or when you want to use a specific version that has been thoroughly tested with your use case.
+
+## Default Behavior: Latest Version
+
+By default, when you specify a model without a version, MakeHub routes your request to the latest available version of that model. For example, if you specify `openai/gpt-4o`, MakeHub will use the latest version of GPT-4o available from OpenAI.
+
+```python
+# This will use the latest version of GPT-4o
+response = client.chat.completions.create(
+    model="openai/gpt-4o",
+    messages=[
+        {"role": "user", "content": "What's new in machine learning?"}
+    ]
+)
+```
+
+## Specifying a Version
+
+To use a specific version of a model, simply append the version date to the model name using a hyphen. For example, to use the August 6, 2024 version of GPT-4o:
+
+```python
+# This will use the specific version from August 6, 2024
+response = client.chat.completions.create(
+    model="openai/gpt-4o-2024-08-06",
+    messages=[
+        {"role": "user", "content": "What's new in machine learning?"}
+    ]
+)
+```
+
+## Version Format
+
+The version format typically follows the provider's versioning scheme. Most commonly, this is a date in the format `YYYY-MM-DD`, but it may vary depending on the provider.
+
+Here are some examples of how to specify versions for different providers:
+
+### OpenAI
+
+```python
+# OpenAI models with specific versions
+response = client.chat.completions.create(
+    model="openai/gpt-4-turbo-2024-04-09",
+    messages=[{"role": "user", "content": "Hello!"}]
+)
+
+response = client.chat.completions.create(
+    model="openai/gpt-3.5-turbo-0125",
+    messages=[{"role": "user", "content": "Hello!"}]
+)
+```
+
+### Anthropic
+
+```python
+# Anthropic models with specific versions
+response = client.chat.completions.create(
+    model="anthropic/claude-3-opus-20240229",
+    messages=[{"role": "user", "content": "Hello!"}]
+)
+
+response = client.chat.completions.create(
+    model="anthropic/claude-2.1",
+    messages=[{"role": "user", "content": "Hello!"}]
+)
+```
+
+## Available Versions
+
+To see all available versions for each model, visit [makehub.ai/models](https://makehub.ai/models). This page provides a comprehensive list of all supported models and their available versions.
+
+## TypeScript Example
+
+```typescript
+import OpenAI from "openai";
+
+const client = new OpenAI({
+  apiKey: "your_makehub_api_key",
+  baseURL: "https://api.makehub.ai/v1"
+});
+
+async function main() {
+  // Using the latest version
+  const responseLatest = await client.chat.completions.create({
+    model: "openai/gpt-4o",
+    messages: [
+      {role: "user", content: "Summarize the latest advances in AI"}
+    ]
+  });
+  
+  // Using a specific version
+  const responseSpecific = await client.chat.completions.create({
+    model: "openai/gpt-4o-2024-08-06",
+    messages: [
+      {role: "user", content: "Summarize the latest advances in AI"}
+    ]
+  });
+}
+
+main();
+```
+
+## cURL Example
+
+```bash
+# Using the latest version
+curl https://api.makehub.ai/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_makehub_api_key" \
+  -d '{
+    "model": "openai/gpt-4o",
+    "messages": [
+      {"role": "user", "content": "Summarize the latest advances in AI"}
+    ]
+  }'
+
+# Using a specific version
+curl https://api.makehub.ai/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_makehub_api_key" \
+  -d '{
+    "model": "openai/gpt-4o-2024-08-06",
+    "messages": [
+      {"role": "user", "content": "Summarize the latest advances in AI"}
+    ]
+  }'
+```
+
+## Best Practices for Version Management
+
+Here are some recommended practices for managing model versions in your applications:
+
+1. **Development and Testing**: Use specific versions during development and testing to ensure consistent behavior.
+
+2. **Production**: For production environments, you may want to:
+   - Use a specific version to ensure stability and predictable behavior
+   - Or use the latest version to benefit from improvements and updates
+
+3. **Version Transitions**: When transitioning from one version to another, test thoroughly and consider implementing a gradual rollout.
+
+4. **Documentation**: Document which model versions your application has been tested with to make troubleshooting easier.
+
+## Version Compatibility
+
+While MakeHub handles the routing to specific versions, it's important to note that different versions of a model may have different capabilities, limitations, or response characteristics. Always test your application with the specific model version you intend to use in production.

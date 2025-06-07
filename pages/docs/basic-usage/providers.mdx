@@ -1,0 +1,187 @@
+---
+title: Restrain to Specific Providers
+description: Control which providers handle your requests
+---
+
+# Restrain to Specific Providers
+
+While MakeHub's automatic routing is designed to optimize for cost and performance, there may be cases where you want to restrict your requests to specific providers. This guide explains how to specify which providers should handle your requests.
+
+## Restricting to a Single Provider
+
+To restrict your request to a single provider, add the `providers` field to the `extra_query` parameter with the name of your preferred provider.
+
+### Python Example
+
+```python
+import openai
+
+client = openai.OpenAI(
+    api_key="your_makehub_api_key",
+    base_url="https://api.makehub.ai/v1"
+)
+
+# Restrict to a single provider (OpenAI)
+response = client.chat.completions.create(
+    model="openai/gpt-4",
+    messages=[
+        {"role": "user", "content": "Explain the theory of relativity"}
+    ],
+    extra_query={
+        "providers": "openai"  # Only use OpenAI
+    }
+)
+```
+
+### TypeScript Example
+
+```typescript
+import OpenAI from "openai";
+
+const client = new OpenAI({
+  apiKey: "your_makehub_api_key",
+  baseURL: "https://api.makehub.ai/v1"
+});
+
+async function main() {
+  // Restrict to a single provider (OpenAI)
+  const response = await client.chat.completions.create({
+    model: "openai/gpt-4",
+    messages: [
+      {role: "user", content: "Explain the theory of relativity"}
+    ],
+    extra_query: {
+      providers: "openai"  // Only use OpenAI
+    }
+  });
+  
+  console.log(response.choices[0].message.content);
+}
+
+main();
+```
+
+### cURL Example
+
+```bash
+curl https://api.makehub.ai/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_makehub_api_key" \
+  -d '{
+    "model": "openai/gpt-4",
+    "messages": [
+      {"role": "user", "content": "Explain the theory of relativity"}
+    ],
+    "extra_query": {
+      "providers": "openai"
+    }
+  }'
+```
+
+## Restricting to Multiple Providers
+
+You can also restrict your request to a list of preferred providers. MakeHub will try each provider in the order specified until a successful response is received.
+
+### Python Example
+
+```python
+import openai
+
+client = openai.OpenAI(
+    api_key="your_makehub_api_key",
+    base_url="https://api.makehub.ai/v1"
+)
+
+# Restrict to multiple providers
+response = client.chat.completions.create(
+    model="openai/gpt-4",
+    messages=[
+        {"role": "user", "content": "Compare and contrast quantum computing with classical computing"}
+    ],
+    extra_query={
+        "providers": ["openai", "anthropic", "mistral"]  # Try these providers in order
+    }
+)
+```
+
+### TypeScript Example
+
+```typescript
+import OpenAI from "openai";
+
+const client = new OpenAI({
+  apiKey: "your_makehub_api_key",
+  baseURL: "https://api.makehub.ai/v1"
+});
+
+async function main() {
+  // Restrict to multiple providers
+  const response = await client.chat.completions.create({
+    model: "anthropic/claude-3-5-sonnet",
+    messages: [
+      {role: "user", content: "Compare and contrast quantum computing with classical computing"}
+    ],
+    extra_query: {
+      providers: ["bedrock", "anthropic", "gcp"]  // Try these providers in order
+    }
+  });
+  
+  console.log(response.choices[0].message.content);
+}
+
+main();
+```
+
+### cURL Example
+
+```bash
+curl https://api.makehub.ai/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_makehub_api_key" \
+  -d '{
+    "model": "openai/gpt-4",
+    "messages": [
+      {"role": "user", "content": "Compare and contrast quantum computing with classical computing"}
+    ],
+    "extra_query": {
+      "providers": ["openai", "anthropic", "mistral"]
+    }
+  }'
+```
+
+## Combining Provider Restrictions with Performance Constraints
+
+You can combine provider restrictions with performance constraints to have even more control over how your requests are routed.
+
+```python
+# Restrict to multiple providers with performance constraints
+response = client.chat.completions.create(
+    model="openai/gpt-4",
+    messages=[
+        {"role": "user", "content": "Explain the impact of artificial intelligence on society"}
+    ],
+    extra_query={
+        "providers": ["openai", "anthropic"],  # Only use these providers
+        "max_latency": 300,                    # Maximum latency of 300ms
+        "min_throughput": "best"               # Best throughput among the specified providers
+    }
+)
+```
+
+## Provider Compatibility
+
+When restricting to specific providers, ensure that the model you're requesting is available from those providers. For example, if you specify `model="openai/gpt-4"` but restrict to `providers=["anthropic"]`, your request will fail.
+
+To see which models are available from each provider, visit [makehub.ai/models](https://makehub.ai/models).
+
+## Use Cases for Provider Restrictions
+
+There are several common scenarios where you might want to restrict your requests to specific providers:
+
+1. **Compliance and Data Residency**: Some organizations have policies that require data to be processed by specific providers.
+
+2. **Feature Parity**: If you're using features that are only supported by certain providers, you may want to restrict your requests to those providers.
+
+3. **Testing and Benchmarking**: When comparing different providers, you might want to send identical requests to specific providers to benchmark their performance.
+
+4. **Fallback Order Control**: By specifying a list of providers, you can control the exact order in which MakeHub attempts to route your request if the primary provider is unavailable.

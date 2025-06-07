@@ -1,0 +1,126 @@
+---
+title: TypeScript Integration
+description: How to integrate MakeHub with TypeScript applications
+---
+
+# TypeScript Integration
+
+MakeHub offers full compatibility with the OpenAI API, allowing you to easily use our services with your existing TypeScript applications.
+
+## Installation
+
+```bash
+npm install openai
+# or
+yarn add openai
+```
+
+## Configuration
+
+```typescript
+import OpenAI from 'openai';
+
+// Initialize the client with the MakeHub endpoint
+const client = new OpenAI({
+  apiKey: 'YOUR_MAKEHUB_API_KEY', // Replace with your MakeHub API key
+  baseURL: 'https://api.makehub.ai/v1' // MakeHub endpoint
+});
+
+// Example completion request
+async function generateCompletion() {
+  const response = await client.chat.completions.create({
+    model: 'meta/llama-3-70b-instruct', // Model available on MakeHub
+    messages: [
+      { role: 'system', content: 'You are a helpful AI assistant.' },
+      { role: 'user', content: 'Explain how machine learning works in simple terms.' }
+    ]
+  });
+  
+  console.log(response.choices[0].message.content);
+}
+
+generateCompletion();
+```
+
+## Streaming
+
+```typescript
+import OpenAI from 'openai';
+
+// Initialize the client with the MakeHub endpoint
+const client = new OpenAI({
+  apiKey: 'YOUR_MAKEHUB_API_KEY',
+  baseURL: 'https://api.makehub.ai/v1'
+});
+
+// Example streaming request
+async function generateStreamingCompletion() {
+  const stream = await client.chat.completions.create({
+    model: 'meta/llama-3-70b-instruct',
+    messages: [
+      { role: 'system', content: 'You are a helpful AI assistant.' },
+      { role: 'user', content: 'Write a short poem about artificial intelligence.' }
+    ],
+    stream: true
+  });
+  
+  // Display the response as it arrives
+  for await (const chunk of stream) {
+    if (chunk.choices[0]?.delta?.content) {
+      process.stdout.write(chunk.choices[0].delta.content);
+    }
+  }
+  console.log();
+}
+
+generateStreamingCompletion();
+```
+
+## Function Calling
+
+```typescript
+import OpenAI from 'openai';
+
+// Initialize the client with the MakeHub endpoint
+const client = new OpenAI({
+  apiKey: 'YOUR_MAKEHUB_API_KEY',
+  baseURL: 'https://api.makehub.ai/v1'
+});
+
+// Define available tools
+const tools = [
+  {
+    type: 'function' as const,
+    function: {
+      name: 'get_weather',
+      description: 'Get the current weather for a given location',
+      parameters: {
+        type: 'object',
+        properties: {
+          location: {
+            type: 'string',
+            description: 'The city and country, e.g. "Paris, France"'
+          }
+        },
+        required: ['location']
+      }
+    }
+  }
+];
+
+// Example request with function calling
+async function functionCalling() {
+  const response = await client.chat.completions.create({
+    model: 'openai/gpt-4o', // A model supporting function calling
+    messages: [
+      { role: 'user', content: 'What\'s the weather like in Paris today?' }
+    ],
+    tools
+  });
+  
+  console.log(response.choices[0].message.content);
+  console.log(response.choices[0].message.tool_calls);
+}
+
+functionCalling();
+```
