@@ -7,7 +7,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { SignInPage } from "@/components/sign_in/sign-in"
+import { SignInForm } from "@/components/sign_in/sign-in"
 
 interface SignInDialogProps {
   className?: string;
@@ -26,7 +26,7 @@ export function SignInDialog({ className, children }: SignInDialogProps) {
       </DialogTrigger>
       <DialogContent className="sm:max-w-[450px] p-0">
         <DialogTitle className="sr-only">Sign in to your account</DialogTitle>
-        <SignInPage />
+        <SignInForm />
       </DialogContent>
     </Dialog>
   )
