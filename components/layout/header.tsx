@@ -60,7 +60,6 @@ function Header1({ heroHeight }: Header1Props) {
 
     const getAvatarUrl = () => {
         if (!user) return null;
-        console.log('Getting avatar for user:', user);
 
         // For GitHub
         if (user.app_metadata?.provider === 'github') {
@@ -87,10 +86,6 @@ function Header1({ heroHeight }: Header1Props) {
     }
 
     useEffect(() => {
-        if (user) {
-            console.log('User in header:', user);
-            console.log('Avatar URL:', getAvatarUrl());
-        }
 
         const handleScroll = () => {
             const scrolledPastHero = window.scrollY > heroHeight - 50; // Adjust 50px for a smoother transition

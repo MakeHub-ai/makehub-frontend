@@ -108,7 +108,7 @@ export function ChatInterface({
       // If no conversation is selected, clear messages
       setMessages([]);
     }
-  }, [currentConversation?.id]); // Fix: Only depend on the ID, not the entire object
+  }, [currentConversation]); // Changed dependency from currentConversation?.id to currentConversation
 
   // Sync messages with storage only when they actually change
   useEffect(() => {
@@ -443,4 +443,3 @@ export function ChatInterface({
     </div>
   )
 }
-

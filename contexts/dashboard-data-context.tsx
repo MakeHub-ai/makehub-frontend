@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import { getUserUsage } from '@/lib/makehub-client';
+import { getUserUsageLocal } from '@/lib/local-api-client';
 import type { UsageResponse, UsageItem, UsagePaginatedData } from '@/types/dashboard';
 
 // Cache management for localStorage persistence
@@ -23,7 +23,6 @@ const saveToCache = (data: UsageResponse['data'], userId?: string) => {
       userId
     };
     localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
-    console.log('💾 Dashboard Data Context: Data cached to localStorage');
   } catch (error) {
     console.warn('Failed to save data to cache:', error);
   }
@@ -42,14 +41,9 @@ const loadFromCache = (userId?: string): UsageResponse['data'] | null => {
     
     if (isExpired || isDifferentUser) {
       localStorage.removeItem(CACHE_KEY);
-      console.log('🗑️ Dashboard Data Context: Cache expired or different user, cleared');
       return null;
     }
     
-    console.log('📦 Dashboard Data Context: Loaded data from cache', {
-      age: Math.round((Date.now() - cacheData.timestamp) / 1000 / 60), // minutes
-      itemsCount: cacheData.data.items.length
-    });
     return cacheData.data;
   } catch (error) {
     console.warn('Failed to load data from cache:', error);
@@ -60,7 +54,6 @@ const loadFromCache = (userId?: string): UsageResponse['data'] | null => {
 
 const clearCache = () => {
   localStorage.removeItem(CACHE_KEY);
-  console.log('🗑️ Dashboard Data Context: Cache cleared');
 };
 
 interface DashboardDataState {
@@ -90,7 +83,6 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
   useEffect(() => {
     const cachedData = loadFromCache(user?.id);
     if (cachedData) {
-      console.log('🚀 Dashboard Data Context: Using cached data - no loading needed!');
       setUsageData(cachedData);
       setUsageItems(cachedData.items);
       setPaginatedUsageData({
@@ -104,9 +96,9 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
   }, [user?.id]);
 
   const fetchData = useCallback(async (skipLoadingState = false) => {
-    if (!session?.access_token) {
+    if (!user?.id) {
       setIsLoading(false);
-      setError('No active session');
+      setError('No authenticated user');
       return;
     }
 
@@ -116,17 +108,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       }
       setError(null);
       
-      console.log('🔄 Dashboard Data Context: Fetching usage data...');
-      const response = await getUserUsage(session, 0);
-      
-      if (response.error) {
-        throw new Error(response.error.message);
-      }
-
-      console.log('✅ Dashboard Data Context: Data fetched successfully', {
-        itemsCount: response.data.items.length,
-        hasMore: response.data.has_more
-      });
+      const response = await getUserUsageLocal(0);
 
       // Save to cache for persistence across page refreshes
       saveToCache(response.data, user?.id);
@@ -142,20 +124,18 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       setLastUpdated(new Date());
       
     } catch (err) {
-      console.error('❌ Dashboard Data Context: Error fetching data:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch dashboard data');
       // Clear cache on error
       clearCache();
     } finally {
       setIsLoading(false);
     }
-  }, [session, user?.id]);
+  }, [user?.id]);
 
   // Initial data fetch - only if no cached data
   useEffect(() => {
     // If we already have cached data, don't fetch again
     if (usageData) {
-      console.log('📦 Dashboard Data Context: Using cached data, skipping fetch');
       return;
     }
     
@@ -166,25 +146,15 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
   const refresh = useCallback(async () => {
     if (isRefreshing) return; // Prevent multiple simultaneous refreshes
     
-    console.log('🔄 Dashboard Data Context: Manual refresh triggered');
     setIsRefreshing(true);
     setError(null);
     
     try {
-      if (!session?.access_token) {
-        throw new Error('No active session');
+      if (!user?.id) {
+        throw new Error('No authenticated user');
       }
 
-      const response = await getUserUsage(session, 0);
-      
-      if (response.error) {
-        throw new Error(response.error.message);
-      }
-
-      console.log('✅ Dashboard Data Context: Refresh completed successfully', {
-        itemsCount: response.data.items.length,
-        hasMore: response.data.has_more
-      });
+      const response = await getUserUsageLocal(0);
 
       // Save to cache for persistence
       saveToCache(response.data, user?.id);
@@ -200,14 +170,13 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       setLastUpdated(new Date());
       
     } catch (err) {
-      console.error('❌ Dashboard Data Context: Refresh failed:', err);
       setError(err instanceof Error ? err.message : 'Failed to refresh data');
       // Clear cache on error
       clearCache();
     } finally {
       setIsRefreshing(false);
     }
-  }, [session, user?.id, isRefreshing]);
+  }, [user?.id, isRefreshing]);
 
   // Removed automatic refresh on window focus per user request
 
