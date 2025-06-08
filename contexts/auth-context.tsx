@@ -10,17 +10,19 @@ interface AuthContextType {
   session: Session | null
   loading: boolean
   signOut: () => Promise<void>
-  signInWithEmail: (email: string, password: string) => Promise<{ error: any }>
-  signInWithGoogle: () => Promise<{ error: any }>
+  signInWithEmail: (email: string, password: string) => Promise<{ error: Error | null }>
+  signInWithGoogle: () => Promise<{ error: Error | null }>
+  signInWithGitHub: () => Promise<{ error: Error | null }>
 }
 
-const AuthContext = createContext<AuthContextType>({ 
-  user: null, 
-  session: null, 
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  session: null,
   loading: true,
   signOut: async () => {},
   signInWithEmail: async () => ({ error: null }),
-  signInWithGoogle: async () => ({ error: null })
+  signInWithGoogle: async () => ({ error: null }),
+  signInWithGitHub: async () => ({ error: null })
 })
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -33,27 +35,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        console.log('Auth initialization:', {
-          hasSession: !!session,
-          hasAccessToken: !!session?.access_token,
-          error: error?.message
+        // Initial user fetch using getUser()
+        const { data: { user: initialUser }, error: initialError } = await supabase.auth.getUser();
+        console.log('Auth initialization (getUser):', {
+          hasUser: !!initialUser,
+          error: initialError?.message
         });
 
-        if (error) throw error;
-        
-        setSession(session);
-        setUser(session?.user ?? null);
+        if (initialError) {
+          // Don't throw, allow onAuthStateChange to handle session restoration
+          console.error('Initial getUser error:', initialError);
+        }
+        setUser(initialUser ?? null);
+        // Session will be set by onAuthStateChange
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          async (event, session) => {
+          async (event, currentSession) => {
             console.log('Auth state change:', {
               event,
-              hasSession: !!session,
-              hasAccessToken: !!session?.access_token,
+              hasSession: !!currentSession,
+              hasAccessToken: !!currentSession?.access_token,
             });
-            setSession(session);
-            setUser(session?.user ?? null);
+            setSession(currentSession); // Set session from the event
+
+            if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+              // Fetch user again to ensure it's validated
+              const { data: { user: updatedUser }, error: getUserError } = await supabase.auth.getUser();
+              if (getUserError) {
+                console.error('Error fetching user on auth state change:', getUserError);
+                setUser(null); // Or handle error appropriately
+              } else {
+                setUser(updatedUser ?? null);
+              }
+            } else if (event === 'SIGNED_OUT') {
+              setUser(null);
+            }
             
             // Refresh the page to update server-side auth state
             if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
@@ -61,6 +77,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
           }
         );
+
+        // Immediately set session if initialUser exists, as onAuthStateChange might not fire immediately
+        // if a session is already active from a previous page load.
+        if (initialUser) {
+          const { data: { session: activeSession } } = await supabase.auth.getSession(); // getSession is okay here as we have a validated user
+          setSession(activeSession);
+        }
+
 
         return () => subscription.unsubscribe();
       } catch (error) {
@@ -93,20 +117,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${process.env.NEXT_PUBLIC_BASE_URL}/auth/callback`,
+      },
+    });
+    return { error };
+  };
+
+  const signInWithGitHub = async () => {
+    console.log('Initiating GitHub sign-in');
+    console.log('Redirect URL:', `${process.env.NEXT_PUBLIC_BASE_URL}/auth/callback`);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'github',
+      options: {
+        redirectTo: `${process.env.NEXT_PUBLIC_BASE_URL}/auth/callback`,
       },
     });
     return { error };
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      session, 
-      loading, 
+    <AuthContext.Provider value={{
+      user,
+      session,
+      loading,
       signOut,
       signInWithEmail,
-      signInWithGoogle
+      signInWithGoogle,
+      signInWithGitHub
     }}>
       {!loading && children}
     </AuthContext.Provider>

@@ -12,7 +12,7 @@ export function SignInForm() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   
-  const { signInWithEmail, signInWithGoogle } = useAuth()
+  const { signInWithEmail, signInWithGoogle, signInWithGitHub } = useAuth()
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -24,7 +24,7 @@ export function SignInForm() {
       if (error) {
         setError(error.message)
       }
-    } catch (err) {
+    } catch (_err) { // eslint-disable-line @typescript-eslint/no-unused-vars
       setError('An unexpected error occurred')
     } finally {
       setLoading(false)
@@ -40,7 +40,23 @@ export function SignInForm() {
       if (error) {
         setError(error.message)
       }
-    } catch (err) {
+    } catch (_err) {
+      setError('An unexpected error occurred')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleGitHubSignIn = async () => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      const { error } = await signInWithGitHub()
+      if (error) {
+        setError(error.message)
+      }
+    } catch (_err) {
       setError('An unexpected error occurred')
     } finally {
       setLoading(false)
@@ -48,7 +64,7 @@ export function SignInForm() {
   }
 
   return (
-    <div className="space-y-6 w-full max-w-sm">
+    <div className="space-y-6 w-full max-w-sm p-6 mx-auto">
       <form onSubmit={handleEmailSignIn} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
@@ -99,6 +115,15 @@ export function SignInForm() {
         disabled={loading}
       >
         {loading ? 'Signing in...' : 'Sign in with Google'}
+      </Button>
+
+      <Button
+        variant="outline"
+        className="w-full"
+        onClick={handleGitHubSignIn}
+        disabled={loading}
+      >
+        {loading ? 'Signing in...' : 'Sign in with GitHub'}
       </Button>
     </div>
   )

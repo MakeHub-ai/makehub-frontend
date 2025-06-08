@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/auth-context'
 import { Button } from '@/components/ui/button'
+import { SignInDialog } from '@/components/sign_in/sign-in-dialog'
 import { Menu, X, User, LogOut } from 'lucide-react'
 import {
   DropdownMenu,
@@ -13,10 +14,10 @@ import {
 } from '@/components/ui/dropdown-menu'
 
 interface HeaderProps {
-  heroHeight?: number
+  heroHeight: number;
 }
 
-export function Header({ heroHeight = 0 }: HeaderProps) {
+export function Header({ heroHeight }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const { user, signOut } = useAuth()
 
@@ -85,9 +86,9 @@ export function Header({ heroHeight = 0 }: HeaderProps) {
                 </DropdownMenu>
               </>
             ) : (
-              <Link href="/sign-in">
+              <SignInDialog>
                 <Button size="sm">Sign In</Button>
-              </Link>
+              </SignInDialog>
             )}
           </div>
 
@@ -141,13 +142,14 @@ export function Header({ heroHeight = 0 }: HeaderProps) {
                   </button>
                 </>
               ) : (
-                <Link
-                  href="/sign-in"
-                  className="text-gray-600 hover:text-gray-900 transition-colors"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Sign In
-                </Link>
+                <SignInDialog>
+                  <button
+                    className="text-left text-gray-600 hover:text-gray-900 transition-colors w-full"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Sign In
+                  </button>
+                </SignInDialog>
               )}
             </div>
           </div>
