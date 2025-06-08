@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ApiKeyCard } from '@/components/api-keys/ApiKeyCard';
 import { NewKeyForm } from '@/components/api-keys/NewKeyForm';
 import { ProtectedRoute } from '@/components/auth/protected-route';
-import { listApiKeys, createApiKey, deleteApiKey } from '@/lib/makehub-client';
+// import { listApiKeys, createApiKey, deleteApiKey } from '@/lib/makehub-client'; // Replaced with fetch
 import { useToast } from '@/components/ui/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { ApiKey } from '@/types/api-keys';
@@ -22,6 +22,7 @@ export default function ApiKeysPage() {
   const [copiedKey, setCopiedKey] = useState('');
   const [visibleKeys, setVisibleKeys] = useState<Record<string, boolean>>({});
   const [deletingKey, setDeletingKey] = useState<string | null>(null);
+  const [keyStats, setKeyStats] = useState<Record<string, Partial<ApiKey>>>({});
 
   useEffect(() => {
     console.log('🔍 Auth state check:', {
@@ -47,13 +48,86 @@ export default function ApiKeysPage() {
         setIsLoading(true);
         console.log('📥 Fetching API keys for user:', session.user.id);
         
-        const response = await listApiKeys(session);
+        // const response = await listApiKeys(session);
+        const res = await fetch('/api/api-keys');
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({ message: 'Failed to fetch API keys' }));
+          throw new Error(errorData.error || res.statusText);
+        }
+        const fetchedKeys: any[] = await res.json();
+        
+        // The server now returns keys with: id, api_key_name, api_key (full), created_at, last_used_at, is_active
+        const mappedKeys: ApiKey[] = fetchedKeys.map(k => ({
+          id: k.id,
+          name: k.api_key_name, // Map from api_key_name to name
+          key: k.api_key || '',  // Use the full api_key from server
+          created_at: k.created_at,
+          last_used: k.last_used_at || undefined, // Map from last_used_at to last_used (optional)
+          user_id: session!.user.id,
+          // is_active is not in types/api-keys.ts::ApiKey, so omit it from this typed object.
+          // If ApiKeyCard needs it, it should be added to the type or handled by the card.
+        }));
+
         console.log('✅ API keys fetched:', {
-          count: response.data.length,
-          keys: response.data.map(k => ({ id: k.id, name: k.name }))
+          count: mappedKeys.length,
+          keys: mappedKeys.map(k => ({ id: k.id, name: k.name, preview: k.key }))
         });
         
-        setApiKeys(response.data);
+        setApiKeys(mappedKeys);
+
+        // After fetching API keys, fetch their stats
+        if (mappedKeys.length > 0) {
+          try {
+            console.log('📊 Fetching API key stats...');
+            const statsRes = await fetch('/api/api-key-stats');
+            if (!statsRes.ok) {
+              const errorData = await statsRes.json().catch(() => ({ message: 'Failed to fetch API key stats' }));
+              throw new Error(errorData.error || statsRes.statusText);
+            }
+            const fetchedStats: any[] = await statsRes.json();
+            
+            const statsMap: Record<string, Partial<ApiKey>> = {};
+            fetchedStats.forEach(stat => {
+              // The RPC function returns 'api_key_id' which is the 'id' of the ApiKey
+              if (stat.api_key_id) { 
+                statsMap[stat.api_key_id] = {
+                  total_requests: stat.total_requests,
+                  total_input_tokens: stat.total_input_tokens,
+                  total_output_tokens: stat.total_output_tokens,
+                  total_cached_tokens: stat.total_cached_tokens,
+                  input_cost_total: stat.input_cost_total,
+                  output_cost_total: stat.output_cost_total,
+                  cached_cost_total: stat.cached_cost_total,
+                  total_cost: stat.total_cost,
+                  first_request: stat.first_request,
+                  last_request: stat.last_request,
+                  avg_input_tokens: stat.avg_input_tokens,
+                  avg_output_tokens: stat.avg_output_tokens,
+                };
+              }
+            });
+            setKeyStats(statsMap);
+            console.log('📈 API key stats fetched and mapped:', statsMap);
+
+            // Merge stats into apiKeys
+            setApiKeys(prevApiKeys => 
+              prevApiKeys.map(apiKey => ({
+                ...apiKey,
+                ...(statsMap[apiKey.id] || {}),
+              }))
+            );
+
+          } catch (statsError) {
+            console.error('❌ Failed to fetch API key stats:', statsError);
+            // Optionally, show a toast for stats fetching error, but don't block keys display
+            toast({
+              title: 'Warning',
+              description: statsError instanceof Error ? statsError.message : 'Could not load usage statistics for API keys.',
+              variant: 'default', // Use a less intrusive variant
+            });
+          }
+        }
+
       } catch (error) {
         console.error('❌ Failed to fetch API keys:', error);
         toast({
@@ -69,23 +143,47 @@ export default function ApiKeysPage() {
     loadApiKeys();
   }, [session, loading, toast]);
 
-  const handleCreateKey = async (name: string) => {
+  const handleCreateKey = async (apiKeyName: string) => {
     if (!session) return;
 
     try {
-      const response = await createApiKey(session, name);
-      setApiKeys(prev => [...prev, response.data]);
+      // const response = await createApiKey(session, name);
+      const res = await fetch('/api/api-keys', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ api_key_name: apiKeyName }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ message: 'Failed to create API key' }));
+        throw new Error(errorData.error || res.statusText);
+      }
+      const newKeyData: any = await res.json();
+
+      const createdKey: ApiKey = {
+        id: newKeyData.id,
+        name: newKeyData.api_key_name,
+        key: newKeyData.api_key, // Full key is returned on create
+        created_at: newKeyData.created_at,
+        last_used: undefined, // Corrected field name, undefined as it's optional and not returned
+        // is_active: newKeyData.is_active, // is_active is not in types/api-keys.ts's ApiKey
+        user_id: session!.user.id, // Add user_id
+      };
+      
+      setApiKeys(prev => [...prev, createdKey]);
       setShowNewKeyForm(false);
       
       // Add to visible keys automatically when created
       setVisibleKeys(prev => ({
         ...prev,
-        [response.data.id]: true
+        [createdKey.id]: true
       }));
       
       toast({
         title: 'API Key Created',
-        description: 'Your new key has been created successfully',
+        description: 'Your new key has been created successfully. You can copy it now.',
         variant: 'default',
       });
     } catch (error) {
@@ -98,13 +196,22 @@ export default function ApiKeysPage() {
     }
   };
 
-  const handleDeleteKey = async (key: string) => {
+  const handleDeleteKey = async (keyId: string) => {
     if (!session) return;
 
     try {
-      setDeletingKey(key);
-      await deleteApiKey(session, key);
-      setApiKeys(prev => prev.filter(k => k.key !== key));
+      setDeletingKey(keyId);
+      // await deleteApiKey(session, keyId);
+      const res = await fetch(`/api/api-keys?id=${keyId}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ message: 'Failed to delete API key' }));
+        throw new Error(errorData.error || res.statusText);
+      }
+
+      setApiKeys(prev => prev.filter(k => k.id !== keyId));
       toast({
         title: 'API Key Deleted',
         description: 'Your API key has been deleted successfully',
@@ -255,11 +362,11 @@ export default function ApiKeysPage() {
                           <ApiKeyCard
                             apiKey={key}
                             isVisible={visibleKeys[key.id] || false}
-                            isCopied={copiedKey === key.key}
-                            isDeleting={deletingKey === key.key}
+                            isCopied={copiedKey === key.key} // This will compare with preview if not just created
+                            isDeleting={deletingKey === key.id} // Compare with ID
                             onToggleVisibility={toggleKeyVisibility}
-                            onCopy={handleCopyKey}
-                            onDelete={handleDeleteKey}
+                            onCopy={handleCopyKey} // This will copy preview if not just created
+                            onDelete={() => handleDeleteKey(key.id)} // Pass ID
                           />
                         </motion.div>
                       ))}

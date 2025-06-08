@@ -100,21 +100,3 @@ CREATE TABLE public.wallet (
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT wallet_pkey PRIMARY KEY (user_id)
 );
-
-//Funnction get_user_stats :
-BEGIN
-    RETURN QUERY
-    SELECT 
-        w.balance,
-        COUNT(r.request_id)::BIGINT as total_requests,
-        COUNT(CASE WHEN r.status = 'completed' THEN 1 END)::BIGINT as successful_requests,
-        COUNT(CASE WHEN r.status = 'error' THEN 1 END)::BIGINT as error_requests,
-        SUM(COALESCE(r.input_tokens, 0) + COALESCE(r.output_tokens, 0))::BIGINT as total_tokens,
-        AVG(m.latency_ms)::FLOAT as avg_latency_ms,
-        MAX(r.timestamp) as last_request_at
-    FROM wallet w
-    LEFT JOIN requests r ON w.user_id = r.user_id
-    LEFT JOIN metrics m ON r.request_id = m.request_id
-    WHERE w.user_id = p_user_id
-    GROUP BY w.user_id, w.balance;
-END;
