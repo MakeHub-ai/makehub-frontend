@@ -12,7 +12,7 @@
 import { Session } from '@supabase/supabase-js'
 import { StreamMetrics, calculateMetrics } from './metrics-utils';
 import { checkForInsufficientFunds, createInsufficientFundsError } from './error-utils';
-import type { GetUsageResponse } from '@/types/dashboard';
+import type { UsageResponse } from '@/types/dashboard';
 import type { ApiKeyResponse, CreateApiKeyResponse } from '@/types/api-keys';
 import type { ModelsResponse, Model } from '@/types/models';
 
@@ -155,10 +155,10 @@ export async function fetchFilteredModels(params: ModelFilter, session: Session 
  * 
  * @param session - The authenticated user session
  * @param offset - Pagination offset for transaction history
- * @returns Promise<GetUsageResponse> - Usage data response
+ * @returns Promise<UsageResponse> - Usage data response
  * @throws Error if authentication is missing or API request fails
  */
-export async function getUserUsage(session: Session | null, offset: number = 0): Promise<GetUsageResponse> {
+export async function getUserUsage(session: Session | null, offset: number = 0): Promise<UsageResponse> {
   console.log('Fetching user usage data:', { hasSession: !!session, offset });
 
   // Check for valid authentication
@@ -185,7 +185,7 @@ export async function getUserUsage(session: Session | null, offset: number = 0):
     }
 
     // Parse and return the successful response
-    const data: GetUsageResponse = await response.json();
+    const data: UsageResponse = await response.json();
     console.log('Usage data received:', data);
     if (!data.data) {
       console.error('No usage data found in response:', data);
@@ -662,5 +662,3 @@ export async function deleteApiKey(session: Session, apiKey: string): Promise<vo
     throw error;
   }
 }
-
-

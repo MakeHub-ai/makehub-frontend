@@ -31,7 +31,7 @@ export default function DashboardPage() {
     },
     {
       title: "Total Requests",
-      value: usageData.total_requests.toLocaleString(),
+      value: (usageData?.total_requests ?? 0).toLocaleString(),
       icon: BarChart
     }
   ] : [];

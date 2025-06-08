@@ -35,7 +35,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        // Initial user fetch using getUser()
+        // ✅ Utiliser getUser() pour une vérification sécurisée
         const { data: { user: initialUser }, error: initialError } = await supabase.auth.getUser();
         console.log('Auth initialization (getUser):', {
           hasUser: !!initialUser,
@@ -43,12 +43,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
 
         if (initialError) {
-          // Don't throw, allow onAuthStateChange to handle session restoration
           console.error('Initial getUser error:', initialError);
+          setUser(null);
+          setSession(null);
+        } else {
+          setUser(initialUser ?? null);
+          // ✅ Récupérer la session seulement si l'utilisateur est valide
+          if (initialUser) {
+            // Utiliser onAuthStateChange pour obtenir la session de manière sécurisée
+            // ou récupérer via getUser qui inclut la session
+            const { data: { session: currentSession } } = await supabase.auth.getSession();
+            setSession(currentSession);
+          }
         }
-        setUser(initialUser ?? null);
-        // Session will be set by onAuthStateChange
 
+        // Configuration de l'écoute des changements d'état
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
           async (event, currentSession) => {
             console.log('Auth state change:', {
@@ -56,39 +65,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               hasSession: !!currentSession,
               hasAccessToken: !!currentSession?.access_token,
             });
-            setSession(currentSession); // Set session from the event
 
             if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-              // Fetch user again to ensure it's validated
+              // ✅ Toujours utiliser getUser() pour valider
               const { data: { user: updatedUser }, error: getUserError } = await supabase.auth.getUser();
               if (getUserError) {
                 console.error('Error fetching user on auth state change:', getUserError);
-                setUser(null); // Or handle error appropriately
+                setUser(null);
+                setSession(null);
               } else {
                 setUser(updatedUser ?? null);
+                setSession(currentSession);
               }
             } else if (event === 'SIGNED_OUT') {
               setUser(null);
+              setSession(null);
+            } else {
+              // Pour les autres événements, mettre à jour la session si elle existe
+              setSession(currentSession);
             }
             
-            // Refresh the page to update server-side auth state
+            // Refresh de la page pour mettre à jour l'état d'authentification côté serveur
             if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
               router.refresh();
             }
           }
         );
 
-        // Immediately set session if initialUser exists, as onAuthStateChange might not fire immediately
-        // if a session is already active from a previous page load.
-        if (initialUser) {
-          const { data: { session: activeSession } } = await supabase.auth.getSession(); // getSession is okay here as we have a validated user
-          setSession(activeSession);
-        }
-
-
         return () => subscription.unsubscribe();
       } catch (error) {
         console.error('Auth initialization error:', error);
+        setUser(null);
+        setSession(null);
       } finally {
         setLoading(false);
       }

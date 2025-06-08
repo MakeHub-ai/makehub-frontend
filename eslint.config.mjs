@@ -1,16 +1,13 @@
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
+import nextPlugin from '@next/eslint-plugin-next';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
-
+/** @type {import('eslint').Linter.FlatConfig[]} */
 const eslintConfig = [
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
+  // Add other global configurations if needed, e.g., eslint:recommended
+  // For TypeScript, Next.js's recommended config usually handles it.
+  // If more specific TypeScript rules are needed, you can add tseslint.configs.recommended.
+
+  nextPlugin.configs.recommended,
+  nextPlugin.configs['core-web-vitals'],
 ];
 
 export default eslintConfig;

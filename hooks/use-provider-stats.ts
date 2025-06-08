@@ -47,10 +47,6 @@ export function useProviderStats(options: UseProviderStatsOptions = {}): UseProv
 
       // Fetch usage data - note: the API handles pagination internally
       const response = await getUserUsage(session, 0);
-      
-      if (response.error) {
-        throw new Error(response.error.message);
-      }
 
       // Process the usage data to generate provider statistics
       const providerStats = processUsageDataForProviders(response.data.items);
