@@ -58,7 +58,7 @@ export function ModelCard({ model, stats, onSelect, href }: ModelCardProps) {
               </div>
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">{model.model_name}</h3>
+              <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">{model.display_name}</h3>
               <div className="flex items-center gap-3 mt-1.5">
                 <div className="flex items-center text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
                   <Building className="h-3 w-3 mr-1" />

@@ -1,5 +1,6 @@
 export interface Model {
   model_name: string;
+  display_name: string;
   model_id: string;
   provider_name: string;
   organisation: string;
