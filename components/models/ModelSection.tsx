@@ -72,23 +72,29 @@ export function ModelSection({ title, models, allModels, onSelectModel }: ModelS
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {models.map((model, index) => {
-          const baseKey = `${model.organisation}/${model.model_name}`;
-          return (
-            <motion.div
-              key={model.model_id}
-              variants={cardVariants}
-              layout
-              className="group"
-              whileHover={{ y: -5 }}
-            >
-              <ModelCard 
-                model={model} 
-                stats={modelStats[baseKey]}
-                onSelect={onSelectModel}
-              />
-            </motion.div>
-          );
-        })}
+        // Use model.model_id as the key for stats, consistent with getModelStats
+        const statsKey = model.model_id;
+        // Créer une clé unique qui combine model_id + provider + index
+        // If `models` are already unique by model_id, model.model_id would suffice.
+        // Keeping uniqueKey as is for now, assuming `models` might not be pre-filtered to unique model_ids.
+        const uniqueKey = `${model.model_id}-${model.provider}-${index}`;
+        
+        return (
+          <motion.div
+            key={uniqueKey}
+            variants={cardVariants}
+            layout
+            className="group"
+            whileHover={{ y: -5 }}
+          >
+            <ModelCard 
+              model={model} 
+              stats={modelStats[statsKey]} // Use the correct key for stats
+              onSelect={onSelectModel}
+            />
+          </motion.div>
+        );
+      })}
       </div>
     </motion.div>
   );

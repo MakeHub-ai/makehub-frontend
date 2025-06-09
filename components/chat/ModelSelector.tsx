@@ -75,7 +75,7 @@ export function ModelSelector({ value, onValueChange, onSettingsClick }: ModelSe
   const filteredAndGroupedModels = React.useMemo(() => {
     const filtered = models.filter(model =>
       model.model_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      model.provider_name.toLowerCase().includes(searchQuery.toLowerCase())
+      model.provider.toLowerCase().includes(searchQuery.toLowerCase())
     );
     return groupModelsByName(filtered);
   }, [models, searchQuery]);
@@ -95,7 +95,7 @@ export function ModelSelector({ value, onValueChange, onSettingsClick }: ModelSe
   }
 
   const generateUniqueKey = (model: Model) => {
-    return `${model.model_id}-${model.quantisation || 'default'}-${model.provider_name}`;
+    return `${model.model_id}-${model.quantisation || 'default'}-${model.provider}`;
   };
 
   const getSelectedModel = () => {

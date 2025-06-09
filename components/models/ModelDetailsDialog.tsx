@@ -23,6 +23,8 @@ export function ModelDetailsDialog({ model, isOpen, onClose, allModels = [] }: M
     return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
   };
 
+  const modelOrganisation = model.model_id ? model.model_id.split('/')[0] : 'unknown';
+
   // Format quantization
   const formatQuantization = (quant: string | number | null | undefined): string | null => {
     if (quant === null || quant === undefined) return null;
@@ -37,16 +39,13 @@ export function ModelDetailsDialog({ model, isOpen, onClose, allModels = [] }: M
     return quantStr.startsWith('FP') ? quantStr : `FP${quantStr}`;
   };
 
-  const logoPath = `/model_logo/${model.organisation.toLowerCase()}.webp`;
+  const logoPath = `/model_logo/${modelOrganisation.toLowerCase()}.webp`;
   
-  // Get all variants of current model
-  const variants = allModels.filter(m => 
-    m.organisation === model.organisation && 
-    m.model_name === model.model_name
-  );
+  // Get all variants of the current model using its model_id
+  const variants = allModels.filter(m => m.model_id === model.model_id);
 
-  // Extract base model_id (common part between all variants)
-  const baseModelId = `${model.organisation.toLowerCase()}/${model.model_name.toLowerCase()}`;
+  // The baseModelId is simply the model_id of the selected model
+  const baseModelId = model.model_id;
 
   // Group by quantization
   const quantizationGroups: Record<string, Model[]> = {};
@@ -60,12 +59,36 @@ export function ModelDetailsDialog({ model, isOpen, onClose, allModels = [] }: M
 
   // Group by provider
   const providerGroups = variants.reduce((acc, variant) => {
-    if (!acc[variant.provider_name]) {
-      acc[variant.provider_name] = [];
+    if (!acc[variant.provider]) {
+      acc[variant.provider] = [];
     }
-    acc[variant.provider_name].push(variant);
+    acc[variant.provider].push(variant);
     return acc;
   }, {} as Record<string, Model[]>);
+
+  
+  // Vérifier les clés de quantization
+  const quantKeys = Object.keys(quantizationGroups);
+  
+  // Vérifier les clés de providers
+  const providerKeys = Object.keys(providerGroups);
+  
+  // Vérifier les clés des variants dans chaque provider
+  Object.entries(providerGroups).forEach(([providerName, providerModels]) => {
+    const variantKeys = providerModels.map((variant, index) => 
+      variant.provider_model_id || `${variant.model_id}-${String(variant.quantisation)}-${index}`
+    );
+    const duplicateVariantKeys = variantKeys.filter((key, index) => variantKeys.indexOf(key) !== index);
+    
+  });
+
+  const formatTokenCount = (kValue: number | undefined | null): string => {
+    if (kValue === undefined || kValue === null) return 'N/A';
+    if (kValue >= 1000) { // e.g. 1000k = 1M
+        return `${(kValue / 1000).toLocaleString()}M tokens`;
+    }
+    return `${kValue.toLocaleString()}k tokens`;
+  };
 
   const handleCopyId = async (id: string) => {
     try {
@@ -127,7 +150,7 @@ export function ModelDetailsDialog({ model, isOpen, onClose, allModels = [] }: M
                   <div className="relative w-9 h-9">
                     <Image
                       src={logoPath}
-                      alt={model.organisation}
+                      alt={modelOrganisation}
                       width={36}
                       height={36}
                       className="rounded-full object-contain"
@@ -141,7 +164,7 @@ export function ModelDetailsDialog({ model, isOpen, onClose, allModels = [] }: M
                   <h2 className="text-2xl sm:text-3xl font-bold truncate">{model.model_name}</h2>
                   <p className="text-sm text-gray-500 mt-0.5 flex items-center gap-2">
                     <Building className="h-3.5 w-3.5" />
-                    {model.organisation}
+                    {modelOrganisation}
                   </p>
                 </div>
                 <Link 
@@ -174,9 +197,12 @@ export function ModelDetailsDialog({ model, isOpen, onClose, allModels = [] }: M
                       const modelId = getModelIdForQuantization(quantization);
                       if (!modelId || quantization === "NO_QUANT") return null;
                       
+                      // SOLUTION: Créer une clé unique pour les quantizations
+                      const quantKey = `quant-${quantization}-${index}-${modelId}`;
+                      
                       return (
                         <motion.div 
-                          key={quantization} 
+                          key={quantKey}  // Clé unique
                           className="flex items-center gap-2"
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
@@ -215,6 +241,7 @@ export function ModelDetailsDialog({ model, isOpen, onClose, allModels = [] }: M
                     {/* Show models without specified quantization */}
                     {quantizationGroups["NO_QUANT"] && quantizationGroups["NO_QUANT"].length > 0 && (
                       <motion.div 
+                        key="no-quant-section"  // Clé unique
                         className="flex items-center gap-2"
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -256,16 +283,19 @@ export function ModelDetailsDialog({ model, isOpen, onClose, allModels = [] }: M
                   className="space-y-6 mt-8"
                 >
                   <div className="mb-2">
-                    <h3 className="text-sm font-medium text-gray-700 mb-2">Available Providers</h3>
+                    <h3 className="text-sm font-medium text-gray-700 mb-2">Available Providers ({Object.keys(providerGroups).length})</h3>
                   </div>
                     {/* List of providers */}
                     <div className="grid gap-6">
                       {Object.entries(providerGroups).map(([providerName, providerModels], index) => {
                         const providerLogoPath = `/model_logo/${providerName.toLowerCase()}.webp`;
                         
+                        // SOLUTION: Clé unique pour les providers
+                        const providerKey = `provider-${providerName}-${index}`;
+                        
                         return (
                           <motion.div 
-                            key={providerName} 
+                            key={providerKey}  // Clé unique
                             className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -294,51 +324,56 @@ export function ModelDetailsDialog({ model, isOpen, onClose, allModels = [] }: M
 
                             {/* List of variants for this provider */}
                             <div className="divide-y divide-gray-50">
-                              {providerModels.map((variant, variantIndex) => (
-                                <motion.div 
-                                  key={variant.model_id} 
-                                  className="p-4 hover:bg-blue-50/20 transition-colors"
-                                  initial={{ opacity: 0 }}
-                                  animate={{ opacity: 1 }}
-                                  transition={{ delay: index * 0.1 + variantIndex * 0.05 }}
-                                >
-                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                    {/* Quantization - only show if present */}
-                                    <div className="flex items-center gap-2">
-                                      <Cpu className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                                      {formatQuantization(variant.quantisation) ? (
-                                        <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium
-                                          ${formatQuantization(variant.quantisation)?.includes("16")
-                                            ? "bg-blue-50 text-blue-700 border border-blue-200/70" 
-                                            : "bg-purple-50 text-purple-700 border border-purple-200/70"
-                                          }`}
-                                        >
-                                          {formatQuantization(variant.quantisation)}
-                                        </span>
-                                      ) : (
-                                        <span className="text-sm text-gray-600">Standard</span>
+                              {providerModels.map((variant, variantIndex) => {
+                                // SOLUTION: Clé garantie unique pour les variants
+                                const variantKey = `${providerKey}-variant-${variantIndex}-${variant.model_id || 'unknown'}-${variant.quantisation || 'no-quant'}`;
+                                
+                                return (
+                                  <motion.div 
+                                    key={variantKey}  // Clé garantie unique
+                                    className="p-4 hover:bg-blue-50/20 transition-colors"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ delay: index * 0.1 + variantIndex * 0.05 }}
+                                  >
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                      {/* Quantization - only show if present */}
+                                      <div className="flex items-center gap-2">
+                                        <Cpu className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                        {formatQuantization(variant.quantisation) ? (
+                                          <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium
+                                            ${formatQuantization(variant.quantisation)?.includes("16")
+                                              ? "bg-blue-50 text-blue-700 border border-blue-200/70" 
+                                              : "bg-purple-50 text-purple-700 border border-purple-200/70"
+                                            }`}
+                                          >
+                                            {formatQuantization(variant.quantisation)}
+                                          </span>
+                                        ) : (
+                                          <span className="text-sm text-gray-600">Standard</span>
+                                        )}
+                                      </div>
+
+                                      {/* Price */}
+                                      <div className="flex items-start gap-2">
+                                        <DollarSign className="h-4 w-4 text-gray-400 flex-shrink-0 mt-0.5" />
+                                        <div className="flex flex-col text-sm">
+                                          <span className="text-gray-600 whitespace-nowrap">Input: {variant.price_per_input_token}$/1M</span>
+                                          <span className="text-gray-600 whitespace-nowrap">Output: {variant.price_per_output_token}$/1M</span>
+                                        </div>
+                                      </div>
+
+                                      {/* Context */}
+                                      {variant.context !== undefined && variant.context !== null && (
+                                        <div className="flex items-center gap-2">
+                                          <FileText className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                          <span className="text-sm text-gray-600 whitespace-nowrap">{formatTokenCount(variant.context)}</span>
+                                        </div>
                                       )}
                                     </div>
-
-                                    {/* Price */}
-                                    <div className="flex items-start gap-2">
-                                      <DollarSign className="h-4 w-4 text-gray-400 flex-shrink-0 mt-0.5" />
-                                      <div className="flex flex-col text-sm">
-                                        <span className="text-gray-600 whitespace-nowrap">Input: {variant.price_per_input_token}$/1M</span>
-                                        <span className="text-gray-600 whitespace-nowrap">Output: {variant.price_per_output_token}$/1M</span>
-                                      </div>
-                                    </div>
-
-                                    {/* Context */}
-                                    {variant.context && (
-                                      <div className="flex items-center gap-2">
-                                        <FileText className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                                        <span className="text-sm text-gray-600 whitespace-nowrap">{variant.context}k tokens</span>
-                                      </div>
-                                    )}
-                                  </div>
-                                </motion.div>
-                              ))}
+                                  </motion.div>
+                                );
+                              })}
                             </div>
                           </motion.div>
                         );

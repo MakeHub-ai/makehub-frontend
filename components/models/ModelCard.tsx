@@ -8,7 +8,7 @@ import { motion } from 'framer-motion';
 
 type ModelCardProps = {
   model: Model;
-  stats: {
+  stats?: { // Make stats optional
     providers: number;
     quantisations: Array<string | number | null | undefined>;
   };
@@ -17,7 +17,8 @@ type ModelCardProps = {
 };
 
 export function ModelCard({ model, stats, onSelect, href }: ModelCardProps) {
-  const logoPath = `/model_logo/${model.organisation.toLowerCase()}.webp`;
+  const organisation = model.model_id ? model.model_id.split('/')[0] : 'unknown';
+  const logoPath = `/model_logo/${organisation.toLowerCase()}.webp`;
 
   // Function to format quantization
   const formatQuantization = (quant: string | number | null | undefined): string | null => {
@@ -38,6 +39,12 @@ export function ModelCard({ model, stats, onSelect, href }: ModelCardProps) {
     visible: { opacity: 1, scale: 1 }
   };
 
+  // Default stats if not provided or partially undefined
+  const displayStats = {
+    providers: stats?.providers ?? 0,
+    quantisations: stats?.quantisations ?? [],
+  };
+
   const CardContent = () => (
     <CardContentBase className="p-5 flex flex-col h-full group-hover:bg-gradient-to-br group-hover:from-blue-50/20 group-hover:to-indigo-50/40 transition-all duration-300">
       <div className="flex items-start justify-between">
@@ -47,7 +54,7 @@ export function ModelCard({ model, stats, onSelect, href }: ModelCardProps) {
               <div className="relative w-7 h-7">
                 <Image
                   src={logoPath}
-                  alt={model.organisation}
+                  alt={organisation}
                   width={28}
                   height={28}
                   className="rounded-full object-contain"
@@ -62,7 +69,7 @@ export function ModelCard({ model, stats, onSelect, href }: ModelCardProps) {
               <div className="flex items-center gap-3 mt-1.5">
                 <div className="flex items-center text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
                   <Building className="h-3 w-3 mr-1" />
-                  {stats.providers} provider{stats.providers !== 1 ? 's' : ''}
+                  {displayStats.providers} provider{displayStats.providers !== 1 ? 's' : ''}
                 </div>
                 
                 <div className="flex items-center text-xs text-gray-500">
@@ -78,7 +85,7 @@ export function ModelCard({ model, stats, onSelect, href }: ModelCardProps) {
       <div className="flex-1" />
 
       <div className="flex flex-wrap gap-1.5 mt-4">
-        {stats.quantisations.map((quant, index) => {
+        {displayStats.quantisations.map((quant, index) => {
           const formattedQuant = formatQuantization(quant);
           if (!formattedQuant) return null;
           
@@ -99,7 +106,7 @@ export function ModelCard({ model, stats, onSelect, href }: ModelCardProps) {
         })}
         
         {/* If no quantization is available, show "Standard" */}
-        {stats.quantisations.length === 0 || stats.quantisations.every(q => q === null || q === undefined) ? (
+        {displayStats.quantisations.length === 0 || displayStats.quantisations.every(q => q === null || q === undefined) ? (
           <motion.span 
             variants={BadgeVariants}
             className="inline-flex px-2.5 py-0.5 rounded-md text-xs font-medium bg-gray-50 text-gray-700 border border-gray-200/70 group-hover:bg-gray-100 group-hover:border-gray-300/70 transition-colors duration-300"

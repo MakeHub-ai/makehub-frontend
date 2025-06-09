@@ -11,7 +11,7 @@ import { Loader2 } from 'lucide-react';
 interface Model {
   model_name: string;
   model_id: string;
-  provider_name: string;
+  provider: string;
   organisation: string;
   price_per_output_token: number;
   price_per_input_token: number;
@@ -83,12 +83,12 @@ export default function HealthMetricsPage() {
         // Initialiser l'état des métriques avec des données temporaires
         const initialMetrics: MetricsState = {};
         fetchedModels.forEach(model => {
-          if (!initialMetrics[model.provider_name]) {
-            initialMetrics[model.provider_name] = {};
+          if (!initialMetrics[model.provider]) {
+            initialMetrics[model.provider] = {};
           }
-          initialMetrics[model.provider_name][model.model_id] = {
+          initialMetrics[model.provider][model.model_id] = {
             modelName: model.model_name,
-            provider: model.provider_name,
+            provider: model.provider,
             lastUpdated: Date.now(),
             status: 'loading',
           };
@@ -116,7 +116,7 @@ export default function HealthMetricsPage() {
         // Étape 2 : Préparer le lot de requêtes pour l'API batch
         const batchRequests = models.map(model => ({
           model_id: model.model_id,
-          provider_id: model.provider_name,
+          provider_id: model.provider,
           n_last_minutes: 120
         }));
 
@@ -198,10 +198,10 @@ export default function HealthMetricsPage() {
 
   // Group models by provider for rendering
   const modelsByProvider = models.reduce((acc, model) => {
-    if (!acc[model.provider_name]) {
-      acc[model.provider_name] = [];
+    if (!acc[model.provider]) {
+      acc[model.provider] = [];
     }
-    acc[model.provider_name].push(model);
+    acc[model.provider].push(model);
     return acc;
   }, {} as { [provider: string]: Model[] });
 
@@ -292,7 +292,7 @@ export default function HealthMetricsPage() {
                           key={model.model_id}
                           modelId={model.model_id}
                           modelName={model.model_name}
-                          provider={model.provider_name}
+                          provider={model.provider}
                           companyName={companyName}
                           status={modelMetrics?.status || 'loading'}
                           data={modelMetrics?.data}
@@ -306,7 +306,7 @@ export default function HealthMetricsPage() {
               // Model View (New)
               Object.entries(providersByModel).map(([modelName, modelProviders]) => {
                 const modelProviderStatuses = modelProviders.map(model => {
-                  const modelMetrics = metrics[model.provider_name]?.[model.model_id];
+                  const modelMetrics = metrics[model.provider]?.[model.model_id];
                   return modelMetrics?.status || 'loading';
                 });
 
@@ -321,13 +321,13 @@ export default function HealthMetricsPage() {
                     organization={organization}
                   >
                     {modelProviders.map(model => {
-                      const modelMetrics = metrics[model.provider_name]?.[model.model_id];
+                      const modelMetrics = metrics[model.provider]?.[model.model_id];
                       return (
                         <ProviderMetricsCard
-                          key={`${model.provider_name}-${model.model_id}`}
+                          key={`${model.provider}-${model.model_id}`}
                           modelId={model.model_id}
                           modelName={model.model_name}
-                          provider={model.provider_name}
+                          provider={model.provider}
                           status={modelMetrics?.status || 'loading'}
                           data={modelMetrics?.data}
                         />

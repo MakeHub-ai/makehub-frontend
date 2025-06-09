@@ -3,7 +3,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Search, Filter, X, Loader2 } from 'lucide-react';
 import type { Model } from '@/types/models';
-import { fetchModels } from '@/lib/makehub-client';
 import { groupModelsByBase, sortProviders, sortModelsByProviderCount, sortOrganizationsByAverageProviders } from '@/utils/modelUtils';
 import { ModelSection } from '@/components/models/ModelSection';
 import { ModelDetailsDialog } from '@/components/models/ModelDetailsDialog';
@@ -21,12 +20,13 @@ export default function ModelsPage() {
     const getModels = async () => {
       try {
         setLoading(true);
-        const response = await fetchModels();
-        if (response.error) {
-          setError(response.error);
+        const response = await fetch('/api/models');
+        if (!response.ok) {
+          const errorData = await response.json();
+          setError(errorData.message || `HTTP error! status: ${response.status}`);
         } else {
-          console.log('Fetched models:', response.data);
-          setModels(response.data);
+          const data = await response.json();
+          setModels(data);
         }
       } catch (err) {
         setError('Failed to fetch models');
@@ -40,19 +40,35 @@ export default function ModelsPage() {
   }, []);
 
   const groupModelsByOrganization = useCallback((allModels: Model[]) => {
+    
     const groups: { [key: string]: Model[] } = {};
     
-    // Take one representative per model for each organization
-    allModels.forEach(model => {
-      const organization = model.organisation || 'unknown';
+    allModels.forEach((model, index) => {
+      const organization = model.model_id ? model.model_id.split('/')[0] : 'unknown';
       if (!groups[organization]) {
         groups[organization] = [];
       }
       
-      // Check if a model with the same name already exists
-      const existingModel = groups[organization].find(m => m.model_name === model.model_name);
-      if (!existingModel) {
+      // DEBUG: Log chaque modèle traité
+      
+      // Vérification plus robuste des duplicatas
+      const existingModelWithSameId = groups[organization].find(m => m.model_id === model.model_id);
+      
+      if (!existingModelWithSameId) {
         groups[organization].push(model);
+      } else {
+      }
+    });
+    
+    // DEBUG: Vérifier s'il y a encore des duplicatas après déduplication
+    Object.entries(groups).forEach(([org, orgModels]) => {
+      const modelIds = orgModels.map(m => m.model_id);
+      const duplicateIds = modelIds.filter((id, index) => modelIds.indexOf(id) !== index);
+      
+      if (duplicateIds.length > 0) {
+        console.error(`🚨 DUPLICATE KEYS FOUND IN ${org}:`, duplicateIds);
+        console.error('Models in this group:', orgModels);
+      } else {
       }
     });
     
@@ -67,7 +83,6 @@ export default function ModelsPage() {
     setSearchTerm(e.target.value);
   };
 
-  // Skeleton loader component
   const ModelsSkeleton = () => (
     <div className="space-y-16">
       {[1, 2].map((section) => (
@@ -126,21 +141,23 @@ export default function ModelsPage() {
     );
   }
 
-  const filteredModels = models.filter(model => 
-    model.model_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    model.provider_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    model.organisation.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredModels = models.filter(model => {
+    const modelOrg = model.model_id ? model.model_id.split('/')[0] : '';
+    return (
+      (model.model_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (model.provider || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (modelOrg || '').toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  });
+
 
   const groupedModels = groupModelsByOrganization(filteredModels);
   
-  // Sort models in each group by number of providers
   const organizationsWithSortedModels: [string, Model[]][] = Object.entries(groupedModels).map(([org, orgModels]) => [
     org,
     sortModelsByProviderCount(orgModels, filteredModels)
   ]);
   
-  // Sort organizations by average number of providers
   const sortedOrganizations = sortOrganizationsByAverageProviders(
     organizationsWithSortedModels,
     filteredModels
@@ -244,19 +261,24 @@ export default function ModelsPage() {
               animate="visible"
             >
               {sortedOrganizations.length > 0 ? (
-                sortedOrganizations.map(([organization, models]) => (
-                  <ModelSection
-                    key={organization}
-                    title={capitalizeFirstLetter(organization)}
-                    models={models.map(model => ({
-                      ...model,
-                      // Add ID for anchor
-                      elementId: `${model.organisation.toLowerCase()}-${model.model_name.toLowerCase()}`.replace(/\s+/g, '-')
-                    }))}
-                    allModels={filteredModels}
-                    onSelectModel={setSelectedModel}
-                  />
-                ))
+                sortedOrganizations.map(([organization, orgModels]) => {
+                  
+                  return (
+                    <ModelSection
+                      key={organization}
+                      title={capitalizeFirstLetter(organization)}
+                      models={orgModels.map((model, index) => ({
+                          ...model,
+                          // Créer un ID unique pour debugging
+                          elementId: `${model.model_id?.replace(/[\/\s.:]+/g, '-')}-${index}`,
+                          // Ajouter un debugId unique
+                          debugId: `${organization}-${index}-${model.model_id}`
+                      }))}
+                      allModels={filteredModels}
+                      onSelectModel={setSelectedModel}
+                    />
+                  );
+                })
               ) : (
                 <motion.div 
                   className="flex flex-col items-center justify-center py-16"

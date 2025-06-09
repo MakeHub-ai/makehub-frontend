@@ -145,7 +145,7 @@ export function ParametersSidebar({
               <div className="px-4 py-3 border-b border-gray-100/50 bg-gradient-to-r from-blue-50/50 to-indigo-50/50">
                 <div className="text-xs text-gray-500 mb-1">Current Provider</div>
                 <div className="text-lg font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                  {metrics.provider || selectedModel?.provider_name || 'Not selected'}
+                  {metrics.provider || selectedModel?.provider || 'Not selected'}
                 </div>
               </div>
               

@@ -84,7 +84,7 @@ The response contains an array of model objects under the `data` key. Each model
 | `model_id` | string | Unique identifier for the model (in the format `organisation/model_name`) |
 | `model_name` | string | Name of the model |
 | `organisation` | string | Organisation that created the model |
-| `provider_name` | string | Service provider hosting the model |
+| `provider` | string | Service provider hosting the model |
 | `context` | integer | Maximum context length in thousands of tokens |
 | `price_per_input_token` | number | Cost per input token in cents/1M tokens |
 | `price_per_output_token` | number | Cost per output token in cents/1M tokens |
@@ -104,7 +104,7 @@ The response contains an array of model objects under the `data` key. Each model
       "organisation": "anthropic",
       "price_per_input_token": 0.8,
       "price_per_output_token": 4,
-      "provider_name": "anthropic",
+      "provider": "anthropic",
       "quantisation": null,
       "native_support_function_calling": true,
       "native_support_tools_calling": true
@@ -116,7 +116,7 @@ The response contains an array of model objects under the `data` key. Each model
       "organisation": "anthropic",
       "price_per_input_token": 3,
       "price_per_output_token": 15,
-      "provider_name": "anthropic",
+      "provider": "anthropic",
       "quantisation": null,
       "native_support_function_calling": true,
       "native_support_tools_calling": true
@@ -128,7 +128,7 @@ The response contains an array of model objects under the `data` key. Each model
       "organisation": "openai",
       "price_per_input_token": 2.5,
       "price_per_output_token": 10,
-      "provider_name": "azure-UKSouth",
+      "provider": "azure-UKSouth",
       "quantisation": null,
       "native_support_function_calling": true,
       "native_support_tools_calling": true

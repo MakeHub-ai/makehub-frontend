@@ -2,12 +2,13 @@ export interface Model {
   model_name: string;
   display_name: string;
   model_id: string;
-  provider_name: string;
+  provider: string;
   organisation: string;
   price_per_output_token: number;
   price_per_input_token: number;
   quantisation: "fp8" | "fp16" | null;
   context: number;
+  provider_model_id: string;
 }
 
 export interface ModelsResponse {
