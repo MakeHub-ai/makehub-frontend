@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
@@ -24,8 +26,12 @@ export function SignInDialog({ className, children }: SignInDialogProps) {
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[450px] p-0">
-        <DialogTitle className="sr-only">Sign in to your account</DialogTitle>
+      <DialogContent className="sm:max-w-[450px] p-6">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-semibold tracking-tight">Sign in to your account</DialogTitle>
+          <DialogDescription>
+          </DialogDescription>
+        </DialogHeader>
         <SignInForm />
       </DialogContent>
     </Dialog>

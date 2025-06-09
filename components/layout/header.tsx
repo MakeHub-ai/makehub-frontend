@@ -1,7 +1,8 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { SignInDialog } from "@/components/sign_in/sign-in-dialog";
+// SignInDialog n'est plus utilisé ici directement pour le header desktop
+// import { SignInDialog } from "@/components/sign_in/sign-in-dialog"; 
 import {
     NavigationMenu,
     NavigationMenuContent,
@@ -19,6 +20,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Icons } from "@/components/ui/icons"; // Importer les icônes
 import { Menu, MoveRight, X, User } from "lucide-react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -32,7 +34,7 @@ interface HeaderProps {
 }
 
 function Header({ heroHeight }: HeaderProps) {
-    const { user, session } = useAuth()
+    const { user, session, signInWithGoogle, signInWithGitHub } = useAuth() // Ajouter signInWithGoogle et signInWithGitHub
     const router = useRouter()
     const pathname = usePathname()
     const isLandingPage = pathname === '/'
@@ -237,12 +239,37 @@ function Header({ heroHeight }: HeaderProps) {
                             </DropdownMenuContent>
                         </DropdownMenu>
                     ) : (
-                        <SignInDialog className={`
-                            ${isDarkHeader 
-                                ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                                : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700'
-                            }
-                        `} />
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="default" className={`
+                                    ${isDarkHeader 
+                                        ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                                        : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700'
+                                    }
+                                `}>
+                                    Sign in
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent 
+                                align="end" 
+                                className={`w-56 z-[200] ${isDarkHeader ? 'bg-gray-800 text-white border-gray-700' : 'bg-white text-gray-900 border-gray-200'}`}
+                            >
+                                <DropdownMenuItem 
+                                    onClick={signInWithGoogle}
+                                    className={`cursor-pointer ${isDarkHeader ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+                                >
+                                    <Icons.google className="mr-2 h-4 w-4" />
+                                    Sign in with Google
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                    onClick={signInWithGitHub}
+                                    className={`cursor-pointer ${isDarkHeader ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+                                >
+                                    <Icons.gitHub className="mr-2 h-4 w-4" />
+                                    Sign in with GitHub
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     )}
                 </div>
             </div>
@@ -314,8 +341,29 @@ function Header({ heroHeight }: HeaderProps) {
                                         <MoveRight className="h-4 w-4" />
                                     </button>
                                 ) : (
-                                    <div className="pt-4 space-y-2 border-t mt-4">
-                                        <SignInDialog />
+                                    <div className="pt-4 space-y-2 border-t mt-4 border-gray-200 dark:border-gray-700">
+                                        <Button
+                                            variant="outline"
+                                            className="w-full flex items-center justify-center gap-2"
+                                            onClick={() => {
+                                                setOpen(false);
+                                                signInWithGoogle();
+                                            }}
+                                        >
+                                            <Icons.google className="mr-2 h-4 w-4" />
+                                            Sign in with Google
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            className="w-full flex items-center justify-center gap-2"
+                                            onClick={() => {
+                                                setOpen(false);
+                                                signInWithGitHub();
+                                            }}
+                                        >
+                                            <Icons.gitHub className="mr-2 h-4 w-4" />
+                                            Sign in with GitHub
+                                        </Button>
                                     </div>
                                 )}
                             </nav>

@@ -3,33 +3,13 @@
 import { useState } from 'react'
 import { useAuth } from '@/contexts/auth-context'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { Icons } from '@/components/ui/icons' // Importer les icônes
 
 export function SignInForm() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   
-  const { signInWithEmail, signInWithGoogle, signInWithGitHub } = useAuth()
-
-  const handleEmailSignIn = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
-
-    try {
-      const { error } = await signInWithEmail(email, password)
-      if (error) {
-        setError(error.message)
-      }
-    } catch (_err) { // eslint-disable-line @typescript-eslint/no-unused-vars
-      setError('An unexpected error occurred')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const { signInWithGoogle, signInWithGitHub } = useAuth() // Retirer signInWithEmail
 
   const handleGoogleSignIn = async () => {
     setLoading(true)
@@ -64,66 +44,29 @@ export function SignInForm() {
   }
 
   return (
-    <div className="space-y-6 w-full max-w-sm p-6 mx-auto">
-      <form onSubmit={handleEmailSignIn} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            disabled={loading}
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
-          <Input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            disabled={loading}
-          />
-        </div>
+    <div className="space-y-4 w-full max-w-sm p-6 mx-auto flex flex-col items-center">
+      {error && (
+        <div className="text-red-600 text-sm mb-4 p-2 bg-red-100 border border-red-300 rounded-md w-full text-center">{error}</div>
+      )}
 
-        {error && (
-          <div className="text-red-600 text-sm">{error}</div>
-        )}
-
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? 'Signing in...' : 'Sign in with Email'}
-        </Button>
-      </form>
-
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t" />
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-background px-2 text-muted-foreground">Or</span>
-        </div>
-      </div>
-
-      <Button 
-        variant="outline" 
-        className="w-full" 
+      <Button
+        variant="outline"
+        className="w-full flex items-center justify-center gap-2 py-3 text-base"
         onClick={handleGoogleSignIn}
         disabled={loading}
       >
-        {loading ? 'Signing in...' : 'Sign in with Google'}
+        <Icons.google className="h-5 w-5" />
+        {loading ? 'Connexion...' : 'Se connecter avec Google'}
       </Button>
 
       <Button
         variant="outline"
-        className="w-full"
+        className="w-full flex items-center justify-center gap-2 py-3 text-base"
         onClick={handleGitHubSignIn}
         disabled={loading}
       >
-        {loading ? 'Signing in...' : 'Sign in with GitHub'}
+        <Icons.gitHub className="h-5 w-5" />
+        {loading ? 'Connexion...' : 'Se connecter avec GitHub'}
       </Button>
     </div>
   )
