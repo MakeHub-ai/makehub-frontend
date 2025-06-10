@@ -86,22 +86,14 @@ const DashboardDataContext = createContext<DashboardDataState | undefined>(undef
  */
 async function getUserUsageData(offset: number = 0): Promise<{ data: UsageResponse['data'] }> {
   try {
-    // Récupérer toutes les données nécessaires en parallèle
-    const [userStats, wallet, requestsResponse, transactionsResponse] = await Promise.all([
+    // Récupérer les données principales et les requêtes pour les détails
+    const [userStatsResponse, requestsResponse] = await Promise.all([
       fetch('/api/user/stats', {
         method: 'GET',
         credentials: 'include',
       }).then(res => {
         if (!res.ok) throw new Error(`Failed to fetch user stats: ${res.status}`);
-        return res.json() as Promise<UserStats>;
-      }),
-      
-      fetch('/api/user/wallet', {
-        method: 'GET',
-        credentials: 'include',
-      }).then(res => {
-        if (!res.ok) throw new Error(`Failed to fetch wallet: ${res.status}`);
-        return res.json() as Promise<Wallet>;
+        return res.json();
       }),
       
       fetch(`/api/user/requests?page=1&pageSize=${20 + offset}`, {
@@ -110,32 +102,27 @@ async function getUserUsageData(offset: number = 0): Promise<{ data: UsageRespon
       }).then(res => {
         if (!res.ok) throw new Error(`Failed to fetch requests: ${res.status}`);
         return res.json() as Promise<{ data: ApiRequest[]; pagination: any; }>;
-      }),
-      
-      fetch('/api/user/transactions?page=1&pageSize=100', {
-        method: 'GET',
-        credentials: 'include',
-      }).then(res => {
-        if (!res.ok) throw new Error(`Failed to fetch transactions: ${res.status}`);
-        return res.json() as Promise<{ data: Transaction[]; pagination: any; }>;
       })
     ]);
 
-    // Transformer les données au format attendu par le dashboard
+    const userStats = userStatsResponse.data as UserStats;
+
+    // Transformer les requêtes en items d'usage pour la liste détaillée
     const usageItems = transformRequestsToUsageItems(requestsResponse.data);
     const graphItems = generateGraphItems(requestsResponse.data);
-    const costDistribution = generateCostDistribution(transactionsResponse.data);
-    const savingsData = generateSavingsData(transactionsResponse.data);
-    const monthlyUsage = calculateMonthlyUsage(transactionsResponse.data);
+    
+    // Générer des données de distribution et économies simplifiées basées sur les requêtes
+    const costDistribution = generateCostDistributionFromRequests(requestsResponse.data);
+    const savingsData = generateSavingsDataFromRequests(requestsResponse.data);
 
-    // Déterminer le type de plan
-    const isFree = wallet.balance <= 0;
+    // Déterminer le type de plan basé sur le solde
+    const isFree = userStats.balance <= 0;
     const currentPlan = isFree ? 'Free Plan' : 'Paid Plan';
 
     const data: UsageResponse['data'] = {
       object: 'usage_report',
-      total_usage: monthlyUsage,
-      total_credits: wallet.balance,
+      total_usage: userStats.total_spent,
+      total_credits: userStats.balance,
       total_requests: userStats.total_requests,
       current_plan: currentPlan,
       is_free_plan: isFree,
@@ -267,6 +254,64 @@ function calculateMonthlyUsage(transactions: Transaction[]): number {
              transaction.amount < 0; // Seulement les transactions de débit
     })
     .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0);
+}
+
+/**
+ * Génère la distribution des coûts depuis les requêtes
+ */
+function generateCostDistributionFromRequests(requests: ApiRequest[]): CostDistributionItem[] {
+  const costByDate: { [date: string]: { total: number; models: { [model: string]: number } } } = {};
+  
+  requests.forEach(request => {
+    if (request.status === 'completed') {
+      const date = new Date(request.created_at).toISOString().split('T')[0];
+      const cost = ((request.input_tokens || 0) * 0.0001 + (request.output_tokens || 0) * 0.0002);
+      const modelKey = `${request.provider}/${request.model}`;
+      
+      if (!costByDate[date]) {
+        costByDate[date] = { total: 0, models: {} };
+      }
+      costByDate[date].total += cost;
+      costByDate[date].models[modelKey] = (costByDate[date].models[modelKey] || 0) + cost;
+    }
+  });
+
+  return Object.entries(costByDate).map(([date, data]) => ({
+    date,
+    total_cost: data.total,
+    models: data.models
+  })).slice(-30); // Derniers 30 jours
+}
+
+/**
+ * Génère les données d'économies depuis les requêtes
+ */
+function generateSavingsDataFromRequests(requests: ApiRequest[]): SavingsDataItem[] {
+  const last7Days = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    return date.toISOString().split('T')[0];
+  }).reverse();
+
+  return last7Days.map(date => {
+    const dayRequests = requests.filter(r => 
+      new Date(r.created_at).toISOString().split('T')[0] === date &&
+      r.status === 'completed'
+    );
+    
+    const actualCost = dayRequests.reduce((sum, r) => {
+      return sum + ((r.input_tokens || 0) * 0.0001 + (r.output_tokens || 0) * 0.0002);
+    }, 0);
+    const maxCost = actualCost * 1.3; // Assume 30% savings
+    
+    return {
+      date,
+      actual_cost: actualCost,
+      max_cost: maxCost,
+      savings: maxCost - actualCost,
+      count: dayRequests.length
+    };
+  });
 }
 
 export function DashboardDataProvider({ children }: { children: React.ReactNode }) {

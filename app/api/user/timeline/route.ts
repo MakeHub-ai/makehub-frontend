@@ -1,6 +1,7 @@
 // app/api/user/timeline/route.ts
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
+import type { UsageTimeline } from '@/lib/supabase/types';
 
 export async function GET(request: Request) {
   try {
@@ -15,7 +16,7 @@ export async function GET(request: Request) {
     }
 
     const { data: timeline, error } = await supabase
-      .rpc('get_user_timeline_stats', { 
+      .rpc('get_usage_timeline', { 
         p_user_id: user.id,
         p_days: days 
       });

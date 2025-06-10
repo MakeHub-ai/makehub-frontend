@@ -1,11 +1,98 @@
     export interface UserStats {
   balance: number;
+  total_spent: number;
+  total_credits: number;
   total_requests: number;
   successful_requests: number;
   error_requests: number;
-  total_tokens: number;
+  pending_requests: number;
+  requests_last_24h: number;
+  requests_last_week: number;
+  requests_last_month: number;
+  total_input_tokens: number;
+  total_output_tokens: number;
+  total_cached_tokens: number;
   avg_latency_ms: number | null;
+  avg_throughput: number | null;
   last_request_at: string | null;
+  first_request_at: string | null;
+  active_api_keys: number;
+  streaming_requests: number;
+}
+
+// Types pour les nouvelles fonctions RPC
+export interface ModelPerformanceStats {
+  model_id: string;
+  provider: string;
+  display_name: string | null;
+  total_requests: number;
+  successful_requests: number;
+  error_requests: number;
+  success_rate: number;
+  avg_latency_ms: number | null;
+  avg_throughput: number | null;
+  total_input_tokens: number;
+  total_output_tokens: number;
+  total_cost: number;
+  last_used_at: string | null;
+  first_used_at: string | null;
+}
+
+export interface ProviderStatistics {
+  provider: string;
+  total_requests: number;
+  successful_requests: number;
+  error_requests: number;
+  success_rate: number;
+  avg_latency_ms: number | null;
+  avg_throughput: number | null;
+  total_cost: number;
+  models_used: number;
+  requests_last_24h: number;
+  requests_last_week: number;
+  requests_last_month: number;
+  market_share: number;
+}
+
+export interface ApiSecurityStats {
+  api_key_name: string;
+  api_key_id: string;
+  is_active: boolean;
+  created_at: string;
+  last_used_at: string | null;
+  total_requests: number;
+  requests_last_24h: number;
+  requests_last_week: number;
+  successful_requests: number;
+  error_requests: number;
+  unique_models_used: number;
+  total_cost: number;
+}
+
+export interface UsageTimeline {
+  date: string;
+  total_requests: number;
+  successful_requests: number;
+  error_requests: number;
+  total_cost: number;
+  total_input_tokens: number;
+  total_output_tokens: number;
+  avg_latency_ms: number | null;
+  unique_models: number;
+  unique_providers: number;
+}
+
+export interface BillingDetails {
+  transaction_id: string;
+  amount: number;
+  type: string;
+  created_at: string;
+  request_id: string | null;
+  model: string | null;
+  provider: string | null;
+  input_tokens: number | null;
+  output_tokens: number | null;
+  running_balance: number;
 }
 
 export interface Wallet {
