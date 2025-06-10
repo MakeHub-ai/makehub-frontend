@@ -98,15 +98,26 @@ Smart arbitrage, instant failovers, and live performance tracking keep you ahead
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.8 }}
-            className="mt-4 sm:mt-8 flex flex-row items-center justify-center gap-4 sm:gap-x-8"
+            className="mt-4 sm:mt-8 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-x-8"
           >
-            <Link href="/docs" prefetch={true}>
-              <Button size="lg" className="group w-auto px-10 py-7 text-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 hover:scale-105">
-              Get in Now 
-              </Button>
-            </Link>
+            {/* Nouveau bloc de boutons */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Link href="https://marketplace.visualstudio.com/items?itemName=Makehub.makehub-dev" prefetch={true} target="_blank" rel="noopener noreferrer">
+                <Button size="lg" className="group w-auto px-6 py-3 text-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 hover:scale-105 flex items-center gap-2">
+                  <Image src="/companies/cline.png" alt="Cline by MakeHub Logo" width={24} height={24} className="h-6 w-6" />
+                  <span>Cline by MakeHub</span>
+                </Button>
+              </Link>
+              <Link href="https://marketplace.visualstudio.com/items?itemName=Makehub.makehub" prefetch={true} target="_blank" rel="noopener noreferrer">
+                <Button size="lg" className="group w-auto px-6 py-3 text-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 hover:scale-105 flex items-center gap-2">
+                  <Image src="/companies/roo_code.png" alt="Roo Code by MakeHub Logo" width={24} height={24} className="h-6 w-6" />
+                  <span>Roo by MakeHub</span>
+                </Button>
+              </Link>
+            </div>
+            {/* Fin du nouveau bloc de boutons */}
             <Link href="https://calendly.com/sf-florido-makehub/30min" prefetch={true} className="text-lg font-semibold leading-6 text-gray-300 hover:text-gray-100 transition-colors">
-              Book a demo <span aria-hidden="true">→</span>
+              Let's Talk <span aria-hidden="true">→</span>
             </Link>
           </motion.div>
         </div>

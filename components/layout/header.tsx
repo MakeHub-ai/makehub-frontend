@@ -44,10 +44,9 @@ function Header({ heroHeight }: HeaderProps) {
 
     const navigationItems = [
         { name: 'Documentation', href: '/docs', public: true },
-        { name: 'Chat', href: '/chat', public: true },
         { name: 'Models', href: '/models', public: true },
-        { name: 'Pricing', href: '/pricing', public: true },
         { name: 'Dashboard', href: '/dashboard', public: false },
+        { name: 'Api Keys', href: '/api-keys', public: true },
     ];
 
     // Strict filtering of navigation items
@@ -213,19 +212,6 @@ function Header({ heroHeight }: HeaderProps) {
                                 <DropdownMenuLabel className={`break-all ${textColorClass}`}>
                                     {user.email}
                                 </DropdownMenuLabel>
-                                <DropdownMenuSeparator className={isDarkHeader ? 'bg-gray-700' : ''} />
-                                <DropdownMenuItem
-                                    onClick={() => handleMenuItemClick('/dashboard/api-security')}
-                                    className={`cursor-pointer ${isDarkHeader ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
-                                >
-                                    API Keys
-                                </DropdownMenuItem>
-                                <DropdownMenuItem 
-                                    onClick={() => handleMenuItemClick('/reload')}
-                                    className={`cursor-pointer ${isDarkHeader ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
-                                >
-                                    Add Credits
-                                </DropdownMenuItem>
                                 <DropdownMenuSeparator className={isDarkHeader ? 'bg-gray-700' : ''} />
                                 <DropdownMenuItem 
                                     onClick={() => {
