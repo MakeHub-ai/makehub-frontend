@@ -32,7 +32,7 @@ const PaymentForm = () => {
 
     try {
       // Add error handling for unauthorized requests
-      const paymentIntent = await api.post('/api/create-payment-intent', {
+      const paymentIntent = await api.post('/api/stripe/create-payment-intent', {
         amount
       }).catch(err => {
         if (err.response?.status === 401) {
@@ -54,7 +54,9 @@ const PaymentForm = () => {
         setStatusMessage(result.error.message || 'Payment failed');
       } else {
         setStatus('success');
-        setStatusMessage(`Payment successful!`);
+        setStatusMessage(`Payment successful! €${amount} has been added to your account.`);
+        // Réinitialiser le montant après succès
+        setAmount(0);
       }
     } catch (error: any) {
       console.error('Payment error:', error);

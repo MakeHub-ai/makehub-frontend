@@ -19,3 +19,4 @@ next-env.d.ts
 .vscode/
 package-lock.json
 package-lock.json
+STRIPE_SETUP.md
