@@ -6,6 +6,7 @@ import { Elements, useStripe, useElements, CardElement } from '@stripe/react-str
 import { useApiClient } from '@/lib/hooks/useApiClient';
 import { LockClosedIcon, ShieldCheckIcon } from '@heroicons/react/24/solid';
 import { useAuth } from '@/contexts/auth-context';
+import { useExchangeRates } from '@/hooks/use-exchange-rates';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
 
@@ -14,6 +15,7 @@ const PaymentForm = () => {
   const stripe = useStripe();
   const elements = useElements();
   const { user } = useAuth();
+  const { convertCurrency, loading: ratesLoading } = useExchangeRates();
   const [amount, setAmount] = useState<string>('');
   const [currency, setCurrency] = useState<'eur' | 'usd'>('eur');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -164,6 +166,33 @@ const PaymentForm = () => {
                 placeholder="0.00"
               />
             </div>
+            
+            {/* Currency Estimation - only show USD estimation when EUR is selected */}
+            {amount && parseFloat(amount) > 0 && currency === 'eur' && (
+              <div className="mt-2 text-sm text-gray-500">
+                {ratesLoading ? (
+                  <span className="flex items-center">
+                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-400 mr-2"></div>
+                    Loading exchange rate...
+                  </span>
+                ) : (
+                  (() => {
+                    const numericAmount = parseFloat(amount);
+                    const convertedAmount = convertCurrency(numericAmount, 'EUR', 'USD');
+                    
+                    if (convertedAmount) {
+                      return (
+                        <span>
+                          ≈ ${convertedAmount} USD <span className="text-gray-400"></span>
+                        </span>
+                      );
+                    }
+                    
+                    return <span className="text-gray-400">Exchange rate unavailable</span>;
+                  })()
+                )}
+              </div>
+            )}
           </div>
 
           {/* Status Message */}
