@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
         .from('transactions')
         .insert({
           user_id: userId,
-          amount: amountInUSD, // Toujours en USD
+          amount: amountInUSD / 100, // Convertir en dollars
           type: 'credit',
           request_id: null // null pour les recharges
         })
