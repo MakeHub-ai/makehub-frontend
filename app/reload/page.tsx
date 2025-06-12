@@ -14,13 +14,26 @@ const PaymentForm = () => {
   const stripe = useStripe();
   const elements = useElements();
   const { user } = useAuth();
-  const [amount, setAmount] = useState<number>(0);
+  const [amount, setAmount] = useState<string>('');
+  const [currency, setCurrency] = useState<'eur' | 'usd'>('eur');
   const [isProcessing, setIsProcessing] = useState(false);
   const [status, setStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [statusMessage, setStatusMessage] = useState('');
 
+  // Helper function to get currency symbol
+  const getCurrencySymbol = (curr: 'eur' | 'usd') => {
+    return curr === 'eur' ? '€' : '$';
+  };
+
+  // Helper function to get currency display name
+  const getCurrencyName = (curr: 'eur' | 'usd') => {
+    return curr === 'eur' ? 'EUR' : 'USD';
+  };
+
   const handlePayment = async () => {
-    if (!stripe || !elements || amount <= 0 || !user?.id) {
+    const numericAmount = parseFloat(amount);
+    
+    if (!stripe || !elements || !amount || numericAmount <= 0 || !user?.id) {
       setStatus('error');
       setStatusMessage('Please ensure you are logged in and have entered an amount');
       return;
@@ -33,7 +46,8 @@ const PaymentForm = () => {
     try {
       // Add error handling for unauthorized requests
       const paymentIntent = await api.post('/api/stripe/create-payment-intent', {
-        amount
+        amount: numericAmount,
+        currency
       }).catch(err => {
         if (err.response?.status === 401) {
           throw new Error('Unable to authenticate. Please ensure you are logged in.');
@@ -54,9 +68,9 @@ const PaymentForm = () => {
         setStatusMessage(result.error.message || 'Payment failed');
       } else {
         setStatus('success');
-        setStatusMessage(`Payment successful! €${amount} has been added to your account.`);
+        setStatusMessage(`Payment successful! ${getCurrencySymbol(currency)}${numericAmount} has been added to your account.`);
         // Réinitialiser le montant après succès
-        setAmount(0);
+        setAmount('');
       }
     } catch (error: any) {
       console.error('Payment error:', error);
@@ -68,91 +82,185 @@ const PaymentForm = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-md mx-auto p-6">
+    <div className="max-w-lg mx-auto">
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+        <div className="p-6">
+          {/* Header */}
+          <div className="text-center mb-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Add Credits</h2>
+            <p className="text-gray-600 text-sm">Choose your preferred currency and amount</p>
+          </div>
 
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Amount (EUR)
-        </label>
-        <input
-          type="number"
-          min="1"
-          value={amount}
-          onChange={(e) => setAmount(Number(e.target.value))}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          placeholder="Enter amount"
-        />
-      </div>
+          {/* Currency Selection */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-900 mb-3">
+              Currency
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className={`
+                relative flex items-center justify-center p-3 rounded-lg border cursor-pointer transition-all duration-200
+                ${currency === 'eur' 
+                  ? 'border-gray-900 bg-gray-50 shadow-sm' 
+                  : 'border-gray-200 hover:border-gray-300 hover:shadow-sm bg-white'
+                }
+              `}>
+                <input
+                  type="radio"
+                  name="currency"
+                  value="eur"
+                  checked={currency === 'eur'}
+                  onChange={(e) => setCurrency(e.target.value as 'eur' | 'usd')}
+                  className="sr-only"
+                />
+                <div className="text-center">
+                  <div className="text-xl mb-1">€</div>
+                  <div className="text-sm font-medium text-gray-900">EUR</div>
+                </div>
+                {currency === 'eur' && (
+                  <div className="absolute top-2 right-2 w-2 h-2 bg-gray-900 rounded-full"></div>
+                )}
+              </label>
+              <label className={`
+                relative flex items-center justify-center p-3 rounded-lg border cursor-pointer transition-all duration-200
+                ${currency === 'usd' 
+                  ? 'border-gray-900 bg-gray-50 shadow-sm' 
+                  : 'border-gray-200 hover:border-gray-300 hover:shadow-sm bg-white'
+                }
+              `}>
+                <input
+                  type="radio"
+                  name="currency"
+                  value="usd"
+                  checked={currency === 'usd'}
+                  onChange={(e) => setCurrency(e.target.value as 'eur' | 'usd')}
+                  className="sr-only"
+                />
+                <div className="text-center">
+                  <div className="text-xl mb-1">$</div>
+                  <div className="text-sm font-medium text-gray-900">USD</div>
+                </div>
+                {currency === 'usd' && (
+                  <div className="absolute top-2 right-2 w-2 h-2 bg-gray-900 rounded-full"></div>
+                )}
+              </label>
+            </div>
+          </div>
 
-      {status !== 'idle' && (
-        <div className={`p-4 rounded-lg ${
-          status === 'error' ? 'bg-red-50 text-red-700 border border-red-200' :
-          status === 'success' ? 'bg-green-50 text-green-700 border border-green-200' :
-          'bg-blue-50 text-blue-700 border border-blue-200'
-        }`}>
-          {statusMessage}
+          {/* Amount Input */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-900 mb-3">
+              Amount
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">
+                {getCurrencySymbol(currency)}
+              </span>
+              <input
+                type="number"
+                min="1"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="w-full pl-8 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
+                placeholder="0.00"
+              />
+            </div>
+          </div>
+
+          {/* Status Message */}
+          {status !== 'idle' && (
+            <div className={`mb-6 p-3 rounded-lg text-sm font-medium border ${
+              status === 'error' ? 'bg-red-50 text-red-700 border-red-200' :
+              status === 'success' ? 'bg-green-50 text-green-700 border-green-200' :
+              'bg-blue-50 text-blue-700 border-blue-200'
+            }`}>
+              {statusMessage}
+            </div>
+          )}
+
+          {/* Card Element */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-900 mb-3">
+              Payment method
+            </label>
+            <div className="p-4 border border-gray-200 rounded-lg bg-gray-50">
+              <div className="flex items-center mb-3 text-gray-500">
+                <LockClosedIcon className="h-4 w-4 mr-2" />
+                <span className="text-xs font-medium">Secured by Stripe</span>
+              </div>
+              <CardElement
+                options={{
+                  style: {
+                    base: {
+                      fontSize: '16px',
+                      color: '#1f2937',
+                      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                      '::placeholder': {
+                        color: '#9ca3af',
+                      },
+                    },
+                    invalid: {
+                      color: '#dc2626',
+                    },
+                  },
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Submit Button */}
+          <button
+            onClick={handlePayment}
+            disabled={isProcessing || !amount || parseFloat(amount) <= 0}
+            className="w-full bg-gray-900 text-white py-3 px-4 rounded-lg font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center"
+          >
+            <ShieldCheckIcon className="h-5 w-5 mr-2" />
+            {isProcessing ? 'Processing...' : `Pay ${getCurrencySymbol(currency)}${amount || '0.00'}`}
+          </button>
         </div>
-      )}
-
-      <div className="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
-        <div className="flex items-center mb-4 text-gray-600">
-          <LockClosedIcon className="h-5 w-5 mr-2" />
-          <span className="text-sm">Secure payment powered by Stripe</span>
-        </div>
-        <CardElement
-          options={{
-            style: {
-              base: {
-                fontSize: '16px',
-                color: '#424770',
-                '::placeholder': {
-                  color: '#aab7c4',
-                },
-              },
-              invalid: {
-                color: '#9e2146',
-              },
-            },
-          }}
-        />
       </div>
-
-      <button
-        onClick={handlePayment}
-        disabled={isProcessing || amount <= 0}
-        className="w-full bg-indigo-600 text-white py-3 px-4 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
-      >
-        <ShieldCheckIcon className="h-5 w-5 mr-2" />
-        {isProcessing ? 'Processing...' : 'Confirm Payment'}
-      </button>
     </div>
   );
 };
 
 export default function ReloadPage() {
   return (
-    <div className="min-h-screen py-12 pt-24 bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <h1 className="text-3xl font-bold text-gray-900">
-            Add Credits to Your Account
-          </h1>
-          <p className="mt-2 text-gray-600">
-            Purchase additional credits securely using our payment system
-          </p>
-        </div>
+    <div className="min-h-screen bg-gray-50">
+      <div className="py-12 pt-24">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Page Header */}
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold text-gray-900">Add Credits</h1>
+            <p className="text-gray-600 mt-1">Securely add credits to your account</p>
+          </div>
 
-        <Elements stripe={stripePromise}>
-          <PaymentForm />
-        </Elements>
+          {/* Payment Form */}
+          <Elements stripe={stripePromise}>
+            <PaymentForm />
+          </Elements>
 
-        <div className="mt-8 text-center text-sm text-gray-500">
-          <p className="mb-2">Protected by Stripe's secure payment system</p>
-          <p>By proceeding with this payment, you agree to our{' '}
-            <a href="/terms" className="text-indigo-600 hover:text-indigo-800">
-              terms and conditions
-            </a>
-          </p>
+          {/* Footer */}
+          <div className="mt-8 text-center">
+            <div className="inline-flex items-center justify-center space-x-4 text-sm text-gray-500 mb-3">
+              <div className="flex items-center">
+                <LockClosedIcon className="h-4 w-4 mr-1" />
+                <span>Encrypted</span>
+              </div>
+              <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
+              <span>PCI DSS compliant</span>
+              <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
+              <span>SOC 2 certified</span>
+            </div>
+            <p className="text-xs text-gray-500">
+              By proceeding, you agree to our{' '}
+              <a href="/terms" className="text-gray-700 hover:text-gray-900 transition-colors">
+                terms and conditions
+              </a>
+              {' '}and{' '}
+              <a href="/policy" className="text-gray-700 hover:text-gray-900 transition-colors">
+                privacy policy
+              </a>
+            </p>
+          </div>
         </div>
       </div>
     </div>

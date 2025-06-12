@@ -20,23 +20,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Unauthorized: User not authenticated' }, { status: 401 })
     }
 
-    const { amount } = await request.json()
+    const { amount, currency = 'eur' } = await request.json()
 
     // Validation du montant
     if (!amount || amount <= 0) {
       return NextResponse.json({ message: 'Invalid amount' }, { status: 400 })
     }
 
-    // Convertir en centimes pour Stripe (EUR)
+    // Validation de la devise
+    if (!['eur', 'usd'].includes(currency.toLowerCase())) {
+      return NextResponse.json({ message: 'Invalid currency. Only EUR and USD are supported.' }, { status: 400 })
+    }
+
+    const normalizedCurrency = currency.toLowerCase()
+
+    // Convertir en centimes pour Stripe
     const amountInCents = Math.round(amount * 100)
 
     // Créer le PaymentIntent avec metadata
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amountInCents,
-      currency: 'eur',
+      currency: normalizedCurrency,
       metadata: {
         user_id: session.user.id,
-        amount_euros: amount.toString()
+        amount: amount.toString(),
+        currency: normalizedCurrency
       },
       automatic_payment_methods: {
         enabled: true,
