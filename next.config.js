@@ -10,7 +10,8 @@ const nextConfig = {
     domains: [
       'ui-avatars.com',
       'avatars.githubusercontent.com',
-      'lh3.googleusercontent.com'
+      'lh3.googleusercontent.com',
+      'api.exchangerate-api.com',
     ],
     remotePatterns: [
       {
