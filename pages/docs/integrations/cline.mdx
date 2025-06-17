@@ -7,20 +7,20 @@ import Image from 'next/image';
 
 [Cline](https://github.com/cline/cline) is an AI assistant for VS Code specialized in software development, allowing developers to interact with large language models directly from their work environment. You can easily configure Cline to use MakeHub as an intelligent routing service between different AI models.
 
-## Overview
+**Quick Start:** Download [Cline by MakeHub](https://marketplace.visualstudio.com/items?itemName=Makehub.makehub-dev) - our optimized fork with MakeHub integration.
 
-Cline integration with MakeHub allows you to access multiple AI models through a single interface, providing seamless switching between different language models based on your needs.
+## Using Cline by MakeHub Fork
 
-## Accessing Settings
+With our fork, setup is simple:
+- Select "MakeHub" as provider
+- Enter your MakeHub API key
 
-- Open VS Code
-- Click on the model name displayed at the bottom of the VS Code window
+Setup is shown in the GIF above.
 
-## Configuring MakeHub Connection
+## Using Official Cline
 
-- Select "OpenAI Compatible" from the API Provider dropdown
+For the official version:
+- Select "OpenAI Compatible" from API Provider dropdown
 - Set Base URL to: `https://api.makehub.ai/v1`
 - Enter your MakeHub API key
 - Select the model (e.g., "anthropic/claude-3-7-sonnet")
-
-With this configuration, Cline will route all your requests through MakeHub, giving you access to multiple AI models through a single interface.
