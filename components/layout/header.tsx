@@ -45,8 +45,9 @@ function Header({ heroHeight }: HeaderProps) {
     const navigationItems = [
         { name: 'Documentation', href: '/docs', public: true },
         { name: 'Models', href: '/models', public: true },
+        { name: 'Pricing', href: '/pricing', public: true },
         { name: 'Dashboard', href: '/dashboard', public: false },
-        { name: 'Api Keys', href: '/api-keys', public: true },
+        { name: 'Api Keys', href: '/dashboard/api-security', public: true },
     ];
 
     // Strict filtering of navigation items
