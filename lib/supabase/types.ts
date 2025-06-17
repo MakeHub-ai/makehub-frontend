@@ -52,6 +52,7 @@ export interface ProviderStatistics {
   requests_last_week: number;
   requests_last_month: number;
   market_share: number;
+  cost_per_token: number;
 }
 
 export interface ApiSecurityStats {

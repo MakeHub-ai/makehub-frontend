@@ -18,7 +18,7 @@ import type {
 } from '@/lib/supabase/types';
 
 // Cache management for localStorage persistence
-const CACHE_KEY = 'dashboard-data-cache';
+const CACHE_KEY = 'dashboard-data-cache-v2'; // Changed key to force cache refresh
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 
 interface CacheData {
@@ -86,8 +86,8 @@ const DashboardDataContext = createContext<DashboardDataState | undefined>(undef
  */
 async function getUserUsageData(offset: number = 0): Promise<{ data: UsageResponse['data'] }> {
   try {
-    // Récupérer les données principales et les requêtes pour les détails
-    const [userStatsResponse, requestsResponse] = await Promise.all([
+    // Récupérer les données principales, les requêtes et les statistiques provider pour les vrais coûts
+    const [userStatsResponse, requestsResponse, providerStatsResponse] = await Promise.all([
       fetch('/api/user/stats', {
         method: 'GET',
         credentials: 'include',
@@ -102,18 +102,35 @@ async function getUserUsageData(offset: number = 0): Promise<{ data: UsageRespon
       }).then(res => {
         if (!res.ok) throw new Error(`Failed to fetch requests: ${res.status}`);
         return res.json() as Promise<{ data: ApiRequest[]; pagination: any; }>;
+      }),
+
+      fetch('/api/user/provider-statistics', {
+        method: 'GET',
+        credentials: 'include',
+      }).then(res => {
+        if (!res.ok) throw new Error(`Failed to fetch provider statistics: ${res.status}`);
+        return res.json();
       })
     ]);
 
     const userStats = userStatsResponse.data as UserStats;
+    const providerStats = providerStatsResponse.data || [];
 
-    // Transformer les requêtes en items d'usage pour la liste détaillée
-    const usageItems = transformRequestsToUsageItems(requestsResponse.data);
+    // Créer une map des coûts par token par provider pour les calculs précis
+    const providerCostMap = new Map<string, number>();
+    providerStats.forEach((stat: any) => {
+      if (stat.cost_per_token && stat.cost_per_token > 0) {
+        providerCostMap.set(stat.provider.toLowerCase(), stat.cost_per_token);
+      }
+    });
+
+    // Transformer les requêtes en items d'usage pour la liste détaillée avec les vrais coûts
+    const usageItems = transformRequestsToUsageItems(requestsResponse.data, providerCostMap);
     const graphItems = generateGraphItems(requestsResponse.data);
     
-    // Générer des données de distribution et économies simplifiées basées sur les requêtes
-    const costDistribution = generateCostDistributionFromRequests(requestsResponse.data);
-    const savingsData = generateSavingsDataFromRequests(requestsResponse.data);
+    // Générer des données de distribution et économies simplifiées basées sur les requêtes avec vrais coûts
+    const costDistribution = generateCostDistributionFromRequests(requestsResponse.data, providerCostMap);
+    const savingsData = generateSavingsDataFromRequests(requestsResponse.data, providerCostMap);
 
     // Déterminer le type de plan basé sur le solde
     const isFree = userStats.balance <= 0;
@@ -142,11 +159,14 @@ async function getUserUsageData(offset: number = 0): Promise<{ data: UsageRespon
 }
 
 /**
- * Transforme les requêtes API en UsageItems
+ * Transforme les requêtes API en UsageItems avec les vrais coûts par provider
  */
-function transformRequestsToUsageItems(requests: ApiRequest[]): UsageItem[] {
+function transformRequestsToUsageItems(requests: ApiRequest[], providerCostMap: Map<string, number>): UsageItem[] {
   return requests.map(request => {
-    const cost = ((request.input_tokens || 0) * 0.0001 + (request.output_tokens || 0) * 0.0002);
+    // Utiliser le vrai coût par token du provider ou fallback
+    const costPerToken = providerCostMap.get(request.provider.toLowerCase()) || 0.0001;
+    const totalTokens = (request.input_tokens || 0) + (request.output_tokens || 0);
+    const cost = totalTokens * costPerToken;
     
     return {
       id: request.request_id,
@@ -257,15 +277,17 @@ function calculateMonthlyUsage(transactions: Transaction[]): number {
 }
 
 /**
- * Génère la distribution des coûts depuis les requêtes
+ * Génère la distribution des coûts depuis les requêtes avec les vrais coûts par provider
  */
-function generateCostDistributionFromRequests(requests: ApiRequest[]): CostDistributionItem[] {
+function generateCostDistributionFromRequests(requests: ApiRequest[], providerCostMap: Map<string, number>): CostDistributionItem[] {
   const costByDate: { [date: string]: { total: number; models: { [model: string]: number } } } = {};
   
   requests.forEach(request => {
     if (request.status === 'completed') {
       const date = new Date(request.created_at).toISOString().split('T')[0];
-      const cost = ((request.input_tokens || 0) * 0.0001 + (request.output_tokens || 0) * 0.0002);
+      const costPerToken = providerCostMap.get(request.provider.toLowerCase()) || 0.0001;
+      const totalTokens = (request.input_tokens || 0) + (request.output_tokens || 0);
+      const cost = totalTokens * costPerToken;
       const modelKey = `${request.provider}/${request.model}`;
       
       if (!costByDate[date]) {
@@ -284,9 +306,9 @@ function generateCostDistributionFromRequests(requests: ApiRequest[]): CostDistr
 }
 
 /**
- * Génère les données d'économies depuis les requêtes
+ * Génère les données d'économies depuis les requêtes avec les vrais coûts par provider
  */
-function generateSavingsDataFromRequests(requests: ApiRequest[]): SavingsDataItem[] {
+function generateSavingsDataFromRequests(requests: ApiRequest[], providerCostMap: Map<string, number>): SavingsDataItem[] {
   const last7Days = Array.from({ length: 7 }, (_, i) => {
     const date = new Date();
     date.setDate(date.getDate() - i);
@@ -300,7 +322,9 @@ function generateSavingsDataFromRequests(requests: ApiRequest[]): SavingsDataIte
     );
     
     const actualCost = dayRequests.reduce((sum, r) => {
-      return sum + ((r.input_tokens || 0) * 0.0001 + (r.output_tokens || 0) * 0.0002);
+      const costPerToken = providerCostMap.get(r.provider.toLowerCase()) || 0.0001;
+      const totalTokens = (r.input_tokens || 0) + (r.output_tokens || 0);
+      return sum + (totalTokens * costPerToken);
     }, 0);
     const maxCost = actualCost * 1.3; // Assume 30% savings
     

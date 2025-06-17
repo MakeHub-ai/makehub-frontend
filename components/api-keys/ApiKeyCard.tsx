@@ -1,6 +1,7 @@
-import { KeyIcon, EyeIcon, EyeOffIcon, CopyIcon, TrashIcon, CheckIcon, Loader2Icon } from 'lucide-react';
+import { KeyIcon, EyeIcon, EyeOffIcon, CopyIcon, TrashIcon, CheckIcon, Loader2Icon, ArrowUpIcon, ArrowDownIcon, ZapIcon } from 'lucide-react';
 import type { ApiKey } from '@/types/api-keys';
 import { motion, AnimatePresence } from 'framer-motion';
+import { formatTokenCount } from '@/utils/formatTokens';
 
 interface ApiKeyCardProps {
   apiKey: ApiKey;
@@ -157,7 +158,7 @@ export function ApiKeyCard({
       {(apiKey.total_cost !== undefined || apiKey.total_requests !== undefined) && (
         <div className="mt-4 pt-4 border-t border-gray-200">
           <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Usage & Cost</h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3 text-xs">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3 text-xs">
             <div className="flex flex-col">
               <span className="text-gray-500">Total Cost:</span>
               <span className="font-medium text-gray-800">
@@ -171,31 +172,30 @@ export function ApiKeyCard({
               </span>
             </div>
             <div className="flex flex-col">
-              <span className="text-gray-500">Avg Input Tokens:</span>
+              <span className="text-gray-500 flex items-center gap-1">
+                <ArrowUpIcon className="h-3 w-3" />
+                Input Tokens:
+              </span>
               <span className="font-medium text-gray-800">
-                {apiKey.avg_input_tokens?.toFixed(0) ?? '-'}
+                {formatTokenCount(apiKey.total_input_tokens)}
               </span>
             </div>
             <div className="flex flex-col">
-              <span className="text-gray-500">Avg Output Tokens:</span>
+              <span className="text-gray-500 flex items-center gap-1">
+                <ArrowDownIcon className="h-3 w-3" />
+                Output Tokens:
+              </span>
               <span className="font-medium text-gray-800">
-                {apiKey.avg_output_tokens?.toFixed(0) ?? '-'}
+                {formatTokenCount(apiKey.total_output_tokens)}
               </span>
             </div>
             <div className="flex flex-col">
-              <span className="text-gray-500">First Request:</span>
-              <span className="font-medium text-gray-800">
-                {apiKey.first_request ? formatDate(apiKey.first_request) : '-'}
+              <span className="text-gray-500 flex items-center gap-1">
+                <ZapIcon className="h-3 w-3" />
+                Cached Tokens:
               </span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-gray-500">Last Request (from stats):</span> 
-              {/* This 'last_request' comes from the stats query based on 'requests' table.
-                  'apiKey.last_used' comes directly from 'api_keys' table. They might differ slightly
-                  if the trigger for 'last_used_at' has a delay or if stats are for completed requests only.
-              */}
               <span className="font-medium text-gray-800">
-                {apiKey.last_request ? formatDate(apiKey.last_request) : '-'}
+                {formatTokenCount(apiKey.total_cached_tokens)}
               </span>
             </div>
           </div>
