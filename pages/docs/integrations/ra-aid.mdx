@@ -1,0 +1,27 @@
+# RA Aid Integration
+
+[RA.Aid](https://github.com/ai-christianson/RA.Aid) is an autonomous coding agent that helps you develop software through research, planning, and implementation. MakeHub is already integrated as a provider.
+
+## Setup
+
+Install RA.Aid:
+```bash
+pip install ra-aid
+```
+
+Set your MakeHub API key:
+```bash
+export MAKEHUB_API_KEY=your_api_key_here
+```
+
+## Basic Usage
+
+```bash
+ra-aid -m "Add logging to this function" --model anthropic/claude-4-sonnet
+```
+
+Browse all available models and their IDs at [https://makehub.ai/models](https://makehub.ai/models).
+
+## Full Documentation
+
+For complete usage details, visit [https://docs.ra-aid.ai](https://docs.ra-aid.ai).

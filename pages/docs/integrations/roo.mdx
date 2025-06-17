@@ -3,25 +3,28 @@ title: Roo Code Integration
 description: How to integrate MakeHub with Roo Code
 ---
 
+import Image from 'next/image';
+
 # Roo Code Integration
+
+<Image src="/video&gif/Makehub_on_Cline.gif" alt="MakeHub on Roo Code" width={800} height={600} />
 
 [Roo Code](https://github.com/RooVetGit/Roo-Code) is an AI-powered autonomous coding agent that lives in your VS Code editor. You can easily configure Roo Code to use MakeHub as an intelligent routing service between different AI models.
 
-## Overview
+**Quick Start:** Download [Roo by MakeHub](https://marketplace.visualstudio.com/items?itemName=Makehub.makehub) - our optimized fork with MakeHub integration.
 
-Roo Code integration with MakeHub allows you to access multiple AI models through a single interface, providing seamless switching between different language models based on your needs.
+## Using Roo by MakeHub Fork
 
-## Accessing Settings
+With our fork, setup is simple:
+- Select "MakeHub" as provider
+- Enter your MakeHub API key
 
-- Open VS Code
-- Click on the Settings (gear icon) in the Roo Code extension panel
+Setup is shown in the GIF above.
 
-## Configuring MakeHub Connection
+## Using Official Roo Code
 
-- In the "AI Provider" section, select "OpenAI Compatible" from the dropdown
+For the official version:
+- Select "OpenAI Compatible" from AI Provider dropdown
 - Set Base URL to: `https://api.makehub.ai/v1`
 - Enter your MakeHub API key
-- Set Model ID to your desired model (e.g., "meta/llama-3-70B-fp8")
-- Optional: Check "Set Azure API version" if required for your configuration
-
-With this configuration, Roo Code will route all your requests through MakeHub, giving you access to multiple AI models through a single interface.
+- Set Model ID (e.g., "meta/llama-3-70B-fp8")
