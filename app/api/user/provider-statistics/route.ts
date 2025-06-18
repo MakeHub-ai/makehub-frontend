@@ -29,7 +29,6 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('DEBUG: Provider statistics API called for user:', user.id);
     
     try {
       // Appeler la fonction RPC get_provider_statistics qui retourne déjà les données agrégées par provider
@@ -44,51 +43,11 @@ export async function GET() {
           hint: statsError.hint
         });
         
-        // Retourner des données de test en cas d'erreur Supabase
-        const testData = [
-          {
-            provider: 'openai',
-            total_requests: 10,
-            successful_requests: 9,
-            error_requests: 1,
-            success_rate: 90,
-            avg_latency_ms: 500,
-            avg_throughput: 50,
-            total_cost: 0.05,
-            models_used: 2,
-            requests_last_24h: 5,
-            requests_last_week: 8,
-            requests_last_month: 10,
-            market_share: 60,
-            cost_per_token: 0.00001,
-          },
-          {
-            provider: 'anthropic',
-            total_requests: 5,
-            successful_requests: 5,
-            error_requests: 0,
-            success_rate: 100,
-            avg_latency_ms: 300,
-            avg_throughput: 60,
-            total_cost: 0.03,
-            models_used: 1,
-            requests_last_24h: 2,
-            requests_last_week: 3,
-            requests_last_month: 5,
-            market_share: 40,
-            cost_per_token: 0.000015,
-          }
-        ];
-        
-        return NextResponse.json({
-          data: testData,
-          timestamp: new Date().toISOString(),
-          debug: 'Using test data due to Supabase error'
-        });
+        return NextResponse.json({ 
+          error: 'Failed to fetch provider statistics', 
+          details: statsError.message 
+        }, { status: 500 });
       }
-
-      console.log('DEBUG: Provider stats received:', providerStats?.length || 0, 'records');
-      console.log('DEBUG: First record:', providerStats?.[0]);
 
       // Les données arrivent déjà agrégées par provider, pas besoin de traitement supplémentaire
       const finalProviderStats = (providerStats || []).map((stat: ProviderStatsFromDB) => ({
@@ -108,7 +67,6 @@ export async function GET() {
         cost_per_token: stat.cost_per_token,
       }));
 
-      console.log('DEBUG: Final provider stats:', finalProviderStats.length, 'providers');
 
       return NextResponse.json({
         data: finalProviderStats,

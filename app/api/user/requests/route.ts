@@ -33,7 +33,14 @@ export async function GET(request: NextRequest) {
 
     const { data: userRequests, error, count } = await supabaseAuthClient
       .from('requests')
-      .select('*', { count: 'exact' })
+      .select(`
+        *,
+        transactions!fk_requests_transaction (
+          amount,
+          type
+        )
+      `, { count: 'exact' })
+      .eq('user_id', session.user.id)
       .order('created_at', { ascending: false })
       .range(offset, offset + pageSize - 1)
 

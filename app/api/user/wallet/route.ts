@@ -18,10 +18,10 @@ export async function GET() {
       return NextResponse.json({ message: 'Unauthorized: User not authenticated' }, { status: 401 })
     }
 
-    // Plus besoin de .eq('user_id', userId) grâce à RLS !
     const { data, error } = await supabaseAuthClient
       .from('wallet')
       .select('*')
+      .eq('user_id', session.user.id)
       .single()
 
     if (error) {

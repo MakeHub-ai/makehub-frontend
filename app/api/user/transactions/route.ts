@@ -34,6 +34,7 @@ export async function GET(request: NextRequest) {
     const { data: transactions, error, count } = await supabaseAuthClient
       .from('transactions')
       .select('*', { count: 'exact' })
+      .eq('user_id', session.user.id)
       .order('created_at', { ascending: false })
       .range(offset, offset + pageSize - 1)
 

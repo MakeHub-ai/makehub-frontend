@@ -13,9 +13,17 @@ import type {
 import type { 
   UserStats, 
   Wallet, 
-  Request as ApiRequest, 
+  Request as BaseApiRequest, 
   Transaction 
 } from '@/lib/supabase/types';
+
+// Type étendu pour les requêtes avec données de transaction
+interface ApiRequest extends BaseApiRequest {
+  transactions?: {
+    amount: number;
+    type: string;
+  } | null;
+}
 
 // Cache management for localStorage persistence
 const CACHE_KEY = 'dashboard-data-cache-v2'; // Changed key to force cache refresh
@@ -113,6 +121,11 @@ async function getUserUsageData(offset: number = 0): Promise<{ data: UsageRespon
       })
     ]);
 
+    // Logs pour débugger les réponses des API
+    console.log('🔍 Dashboard Data - User Stats Response:', userStatsResponse);
+    console.log('🔍 Dashboard Data - Requests Response:', requestsResponse);
+    console.log('🔍 Dashboard Data - Provider Stats Response:', providerStatsResponse);
+
     const userStats = userStatsResponse.data as UserStats;
     const providerStats = providerStatsResponse.data || [];
 
@@ -124,13 +137,13 @@ async function getUserUsageData(offset: number = 0): Promise<{ data: UsageRespon
       }
     });
 
-    // Transformer les requêtes en items d'usage pour la liste détaillée avec les vrais coûts
-    const usageItems = transformRequestsToUsageItems(requestsResponse.data, providerCostMap);
+    // Transformer les requêtes en items d'usage pour la liste détaillée avec les vrais montants des transactions
+    const usageItems = transformRequestsToUsageItems(requestsResponse.data);
     const graphItems = generateGraphItems(requestsResponse.data);
     
-    // Générer des données de distribution et économies simplifiées basées sur les requêtes avec vrais coûts
-    const costDistribution = generateCostDistributionFromRequests(requestsResponse.data, providerCostMap);
-    const savingsData = generateSavingsDataFromRequests(requestsResponse.data, providerCostMap);
+    // Générer des données de distribution et économies basées sur les requêtes avec vrais montants de transactions
+    const costDistribution = generateCostDistributionFromRequestsWithTransactions(requestsResponse.data);
+    const savingsData = generateSavingsDataFromRequestsWithTransactions(requestsResponse.data);
 
     // Déterminer le type de plan basé sur le solde
     const isFree = userStats.balance <= 0;
@@ -159,14 +172,13 @@ async function getUserUsageData(offset: number = 0): Promise<{ data: UsageRespon
 }
 
 /**
- * Transforme les requêtes API en UsageItems avec les vrais coûts par provider
+ * Transforme les requêtes API en UsageItems avec les vrais montants des transactions
  */
-function transformRequestsToUsageItems(requests: ApiRequest[], providerCostMap: Map<string, number>): UsageItem[] {
+function transformRequestsToUsageItems(requests: ApiRequest[]): UsageItem[] {
   return requests.map(request => {
-    // Utiliser le vrai coût par token du provider ou fallback
-    const costPerToken = providerCostMap.get(request.provider.toLowerCase()) || 0.0001;
-    const totalTokens = (request.input_tokens || 0) + (request.output_tokens || 0);
-    const cost = totalTokens * costPerToken;
+    // Utiliser le montant réel de la transaction si disponible
+    const transactionAmount = request.transactions?.amount || 0;
+    const cost = Math.abs(transactionAmount);
     
     return {
       id: request.request_id,
@@ -175,7 +187,7 @@ function transformRequestsToUsageItems(requests: ApiRequest[], providerCostMap: 
       units: `$${cost.toFixed(4)}`,
       description: `${request.provider}/${request.model}`,
       metadata: {
-        transaction_type: 'debit',
+        transaction_type: request.transactions?.type || 'debit',
         details: {
           model: request.model,
           provider: request.provider,
@@ -325,6 +337,65 @@ function generateSavingsDataFromRequests(requests: ApiRequest[], providerCostMap
       const costPerToken = providerCostMap.get(r.provider.toLowerCase()) || 0.0001;
       const totalTokens = (r.input_tokens || 0) + (r.output_tokens || 0);
       return sum + (totalTokens * costPerToken);
+    }, 0);
+    const maxCost = actualCost * 1.3; // Assume 30% savings
+    
+    return {
+      date,
+      actual_cost: actualCost,
+      max_cost: maxCost,
+      savings: maxCost - actualCost,
+      count: dayRequests.length
+    };
+  });
+}
+
+/**
+ * Génère la distribution des coûts depuis les requêtes avec les vrais montants des transactions
+ */
+function generateCostDistributionFromRequestsWithTransactions(requests: ApiRequest[]): CostDistributionItem[] {
+  const costByDate: { [date: string]: { total: number; models: { [model: string]: number } } } = {};
+  
+  requests.forEach(request => {
+    if (request.status === 'completed' && request.transactions) {
+      const date = new Date(request.created_at).toISOString().split('T')[0];
+      const cost = Math.abs(request.transactions.amount);
+      const modelKey = `${request.provider}/${request.model}`;
+      
+      if (!costByDate[date]) {
+        costByDate[date] = { total: 0, models: {} };
+      }
+      costByDate[date].total += cost;
+      costByDate[date].models[modelKey] = (costByDate[date].models[modelKey] || 0) + cost;
+    }
+  });
+
+  return Object.entries(costByDate).map(([date, data]) => ({
+    date,
+    total_cost: data.total,
+    models: data.models
+  })).slice(-30); // Derniers 30 jours
+}
+
+/**
+ * Génère les données d'économies depuis les requêtes avec les vrais montants des transactions
+ */
+function generateSavingsDataFromRequestsWithTransactions(requests: ApiRequest[]): SavingsDataItem[] {
+  const last7Days = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    return date.toISOString().split('T')[0];
+  }).reverse();
+
+  return last7Days.map(date => {
+    const dayRequests = requests.filter(r => 
+      new Date(r.created_at).toISOString().split('T')[0] === date &&
+      r.status === 'completed' &&
+      r.transactions
+    );
+    
+    const actualCost = dayRequests.reduce((sum, r) => {
+      return sum + Math.abs(r.transactions!.amount);
     }, 0);
     const maxCost = actualCost * 1.3; // Assume 30% savings
     

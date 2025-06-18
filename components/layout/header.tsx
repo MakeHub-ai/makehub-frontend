@@ -62,7 +62,6 @@ function Header({ heroHeight }: HeaderProps) {
 
     const getAvatarUrl = () => {
         if (!user) return null;
-        console.log('Getting avatar for user:', user);
 
         // For GitHub
         if (user.app_metadata?.provider === 'github') {

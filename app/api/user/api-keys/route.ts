@@ -21,6 +21,7 @@ export async function GET() {
     const { data, error } = await supabaseAuthClient
       .from('api_keys')
       .select('*')
+      .eq('user_id', session.user.id)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -73,6 +74,7 @@ export async function POST(request: NextRequest) {
       .insert({
         api_key: apiKey,
         api_key_name: api_key_name.trim(),
+        user_id: session.user.id,
         is_active: true,
       })
       .select()
