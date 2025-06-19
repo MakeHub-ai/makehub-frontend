@@ -318,7 +318,7 @@ export default function ApiSecurityPage() {
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                transition={{ type: "spring" as const, stiffness: 300, damping: 30 }}
                 className="overflow-hidden"
               >
                 <NewKeyForm 
@@ -367,7 +367,7 @@ export default function ApiSecurityPage() {
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, height: 0 }}
-                          transition={{ type: "spring" }}
+                          transition={{ type: "spring" as const }}
                           layout
                         >
                           <ApiKeyCard

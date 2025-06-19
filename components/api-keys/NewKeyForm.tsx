@@ -38,7 +38,7 @@ export function NewKeyForm({ onCancel, onCreate }: NewKeyFormProps) {
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      transition={{ type: "spring", stiffness: 300, damping: 25 }}
+      transition={{ type: "spring" as const, stiffness: 300, damping: 25 }}
     >
       <Card className="p-6 mb-6 border border-blue-200 shadow-lg bg-white overflow-hidden">
         <div className="flex items-center gap-2 mb-4">

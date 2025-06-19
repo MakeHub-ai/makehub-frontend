@@ -77,7 +77,7 @@ const PricingPage = () => {
             whileHover={{ y: -5 }}
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 100 }}
+            transition={{ type: "spring" as const, stiffness: 100 }}
           >
             <div className="mb-10 text-center">
               <h2 className="text-4xl font-bold text-blue-600 mb-4">Simple Pricing</h2>

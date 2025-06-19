@@ -145,7 +145,7 @@ export function ModelDetailsDialog({ model, isOpen, onClose, allModels = [] }: M
                   className="h-12 w-12 flex-shrink-0 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-100 flex items-center justify-center p-1.5 shadow-sm"
                   initial={{ scale: 0.8 }}
                   animate={{ scale: 1 }}
-                  transition={{ type: "spring" }}
+                  transition={{ type: "spring" as const }}
                 >
                   <div className="relative w-9 h-9">
                     <Image

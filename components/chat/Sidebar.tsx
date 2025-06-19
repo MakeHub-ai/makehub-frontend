@@ -123,7 +123,7 @@ export function Sidebar({ onNewChat, onSelectChat, currentChatId, onClose, onDel
     show: { 
       opacity: 1, 
       x: 0,
-      transition: { type: "spring", stiffness: 100, damping: 15 }
+      transition: { type: "spring" as const, stiffness: 100, damping: 15 }
     }
   };
 

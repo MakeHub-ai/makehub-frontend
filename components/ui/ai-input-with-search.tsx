@@ -105,13 +105,13 @@ export function AIInputWithSearch({
                       rotate: showSearch ? 180 : 15,
                       scale: 1.1,
                       transition: {
-                        type: "spring",
+                        type: "spring" as const,
                         stiffness: 300,
                         damping: 10,
                       },
                     }}
                     transition={{
-                      type: "spring",
+                      type: "spring" as const,
                       stiffness: 260,
                       damping: 25,
                     }}
@@ -131,7 +131,7 @@ export function AIInputWithSearch({
                     <motion.span
                       initial={{ width: 0, opacity: 0 }}
                       animate={{
-                        width: "auto",
+                        width: "auto" as const,
                         opacity: 1,
                       }}
                       exit={{ width: 0, opacity: 0 }}
