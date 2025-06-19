@@ -8,9 +8,10 @@ import { motion } from 'framer-motion';
 
 type ModelCardProps = {
   model: Model;
-  stats?: { // Make stats optional
+  stats?: {
     providers: number;
     quantisations: Array<string | number | null | undefined>;
+    maxContext?: number | null;
   };
   onSelect?: (model: Model) => void;
   href?: string;
@@ -43,6 +44,7 @@ export function ModelCard({ model, stats, onSelect, href }: ModelCardProps) {
   const displayStats = {
     providers: stats?.providers ?? 0,
     quantisations: stats?.quantisations ?? [],
+    maxContext: stats?.maxContext ?? model.context,
   };
 
   const CardContent = () => (
@@ -74,7 +76,13 @@ export function ModelCard({ model, stats, onSelect, href }: ModelCardProps) {
                 
                 <div className="flex items-center text-xs text-gray-500">
                   <Info className="h-3 w-3 mr-1" />
-                  {model.context || "N/A"}k tokens
+                  {displayStats.maxContext && displayStats.maxContext > 0
+                    ? displayStats.maxContext >= 1e9
+                      ? `${(displayStats.maxContext / 1e9).toFixed(1)}M tokens`
+                      : displayStats.maxContext >= 1e6
+                        ? `${(displayStats.maxContext / 1e6).toFixed(1)}k tokens`
+                          : `${displayStats.maxContext} tokens`
+                    : "N/A tokens"}
                 </div>
               </div>
             </div>

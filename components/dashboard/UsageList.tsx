@@ -2,32 +2,31 @@
 
 import React, { useState, useCallback, useMemo } from 'react';
 import type { FC } from 'react';
-import type { UsageItem, UsagePaginatedData } from '@/types/dashboard';
+import type { UsageTransaction, UsageTransactionsPaginated, UsageTransactionsResponse } from '@/types/dashboard';
 import { AnimatePresence } from 'framer-motion';
 import { Search, Timer, Code2, Filter, DownloadIcon, CreditCard, ChevronRight } from 'lucide-react';
 import { TokenBreakdown } from './TokenBreakdown';
 import { formatDistanceToNow, format, differenceInMinutes } from 'date-fns';
 import { useAuth } from '@/contexts/auth-context';
-import { getUserUsage } from '@/lib/makehub-client';
 
 interface UsageListProps {
-  initialUsage: UsagePaginatedData;
+  initialUsage: UsageTransactionsPaginated;
 }
 
 interface SessionGroup {
   id: string;
   startTime: Date;
   endTime: Date;
-  transactions: UsageItem[];
+  transactions: UsageTransaction[];
   totalCost: number;
   models: Set<string>;
 }
 
-type FormatDetailsFunction = (item: UsageItem) => string;
-type FormatCreditsFunction = (units: string) => string;
+type FormatDetailsFunction = (item: UsageTransaction) => string;
+type FormatCreditsFunction = (amount: number) => string;
 
 interface TransactionItemProps {
-  transaction: UsageItem;
+  transaction: UsageTransaction;
   formatDetails: FormatDetailsFunction;
   formatCredits: FormatCreditsFunction;
 }
@@ -57,7 +56,7 @@ const TransactionItem: FC<TransactionItemProps> = ({
       <div className="flex items-center gap-3 p-2 rounded-lg cursor-pointer hover:bg-white/50 hover:shadow-sm transition-all duration-150 ease-out">
         {/* Icon */}
         <div className="flex-shrink-0">
-          {transaction.metadata.transaction_type === 'credit' ? (
+          {transaction.transaction_type === 'credit' ? (
             <div className="p-1.5 bg-emerald-50 rounded-md border border-emerald-100 transition-all duration-200 group-hover:scale-110 group-hover:shadow-sm group-hover:rotate-[2deg] group-hover:bg-gradient-to-br group-hover:from-emerald-50 group-hover:to-green-50">
               <CreditCard className="h-3.5 w-3.5 text-emerald-600 transition-transform duration-200 group-hover:scale-110" />
             </div>
@@ -75,33 +74,36 @@ const TransactionItem: FC<TransactionItemProps> = ({
               {formatDetails(transaction)}
             </p>
             <span className={`text-sm font-medium tabular-nums ${
-              transaction.metadata.transaction_type === 'debit'
+              transaction.transaction_type === 'debit'
                 ? 'text-blue-600'
                 : 'text-emerald-600'
             }`}>
-              {transaction.metadata.transaction_type === 'credit' ? '+' : '-'}
-              {formatCredits(transaction.units)}
+              {transaction.transaction_type === 'credit' ? '+' : '-'}
+              {formatCredits(transaction.amount)}
             </span>
           </div>
           <p className="text-[11px] text-gray-500">
-            {transaction.metadata.details?.latency
-              ? `${Number(transaction.metadata.details.latency).toFixed(1)}ms · `
-              : ''}
             {format(new Date(transaction.timestamp), 'p')}
           </p>
         </div>
       </div>
 
-      {/* Token Breakdown */}
-      {transaction.type === 'chat_usage' && transaction.metadata.details && (
+      {/* Token Breakdown - Display for API calls with token data */}
+      {transaction.type === 'api_call' && transaction.metadata.input_tokens && transaction.metadata.output_tokens && (
         <div className="ml-9">
-          <TokenBreakdown
-            promptTokens={transaction.metadata.details?.prompt_tokens || 0}
-            completionTokens={transaction.metadata.details?.completion_tokens || 0}
-            model={transaction.metadata.details?.model || 'Unknown Model'}
-            provider={transaction.metadata.details?.provider}
-            isExpanded={isExpanded}
-          />
+          <div className={`overflow-hidden transition-all duration-200 ${isExpanded ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}>
+            <div className="mt-2 p-2 bg-gray-50 rounded text-xs text-gray-600">
+              <span className="font-medium">Input:</span> {transaction.metadata.input_tokens?.toLocaleString()} tokens
+              <span className="mx-2">•</span>
+              <span className="font-medium">Output:</span> {transaction.metadata.output_tokens?.toLocaleString()} tokens
+              {transaction.metadata.cached_tokens && transaction.metadata.cached_tokens > 0 && (
+                <>
+                  <span className="mx-2">•</span>
+                  <span className="font-medium">Cached:</span> {transaction.metadata.cached_tokens.toLocaleString()} tokens
+                </>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -155,7 +157,7 @@ const SessionGroup: FC<SessionGroupProps> = React.memo(({
           <div className="flex items-center gap-3">
             <div className="text-right">
               <p className="text-sm font-medium text-blue-600">
-                {formatCredits(group.totalCost.toString())}
+                {formatCredits(group.totalCost)}
               </p>
               <p className="text-[11px] text-gray-500">
                 {group.transactions.length} requests
@@ -233,22 +235,20 @@ const EmptyState: FC<{ searchTerm: string; onClear: () => void }> = ({ searchTer
 export const UsageList: FC<UsageListProps> = ({ initialUsage }) => {
   const { session } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
-  const [currentOffset, setCurrentOffset] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [paginatedData, setPaginatedData] = useState(initialUsage);
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
 
-  const formatDetails = useCallback((item: UsageItem): string => {
-    if (!item.metadata.details) {
-      return 'Admin funding';
+  const formatDetails = useCallback((item: UsageTransaction): string => {
+    if (!item.metadata.model) {
+      return item.description;
     }
 
-    const { model } = item.metadata.details;
-    return model || item.type;
+    return item.description;
   }, []);
 
-  const formatCredits = useCallback((units: string): string => {
-    const value = Math.abs(parseFloat(units));
+  const formatCredits = useCallback((amount: number): string => {
+    const value = Math.abs(amount);
     
     if (value === 0) return "0.00 $";
     
@@ -270,7 +270,7 @@ export const UsageList: FC<UsageListProps> = ({ initialUsage }) => {
   return diffInMinutes <= 60; // Consider transactions within the last hour as current session
 }, []);
 
-const groupTransactions = useCallback((transactions: UsageItem[]): SessionGroup[] => {
+const groupTransactions = useCallback((transactions: UsageTransaction[]): SessionGroup[] => {
     const sortedTransactions = [...transactions].sort(
       (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
@@ -287,8 +287,8 @@ const groupTransactions = useCallback((transactions: UsageItem[]): SessionGroup[
           startTime: transactionTime,
           endTime: transactionTime,
           transactions: [transaction],
-          totalCost: Math.abs(parseFloat(transaction.units)),
-          models: new Set(transaction.metadata.details?.model ? [transaction.metadata.details.model] : [])
+          totalCost: transaction.amount,
+          models: new Set(transaction.metadata.model ? [transaction.metadata.model] : [])
         };
       } else {
         const timeDiff = differenceInMinutes(transactionTime, currentGroup.endTime);
@@ -296,9 +296,9 @@ const groupTransactions = useCallback((transactions: UsageItem[]): SessionGroup[
         if (timeDiff <= 60) {
           currentGroup.endTime = transactionTime;
           currentGroup.transactions.push(transaction);
-          currentGroup.totalCost += Math.abs(parseFloat(transaction.units));
-          if (transaction.metadata.details?.model) {
-            currentGroup.models.add(transaction.metadata.details.model);
+          currentGroup.totalCost += transaction.amount;
+          if (transaction.metadata.model) {
+            currentGroup.models.add(transaction.metadata.model);
           }
         } else {
           groups.push(currentGroup);
@@ -307,8 +307,8 @@ const groupTransactions = useCallback((transactions: UsageItem[]): SessionGroup[
             startTime: transactionTime,
             endTime: transactionTime,
             transactions: [transaction],
-            totalCost: Math.abs(parseFloat(transaction.units)),
-            models: new Set(transaction.metadata.details?.model ? [transaction.metadata.details.model] : [])
+            totalCost: transaction.amount,
+            models: new Set(transaction.metadata.model ? [transaction.metadata.model] : [])
           };
         }
       }
@@ -322,7 +322,7 @@ const groupTransactions = useCallback((transactions: UsageItem[]): SessionGroup[
   }, []);
 
   const filteredTransactions = useMemo(() => {
-    return paginatedData.items.filter((item: UsageItem) => {
+    return paginatedData.items.filter((item: UsageTransaction) => {
       if (!searchTerm) return true;
       
       const searchLower = searchTerm.toLowerCase();
@@ -341,28 +341,34 @@ const groupTransactions = useCallback((transactions: UsageItem[]): SessionGroup[
   const handlePageChange = useCallback(async (direction: 'prev' | 'next') => {
     if (!session) return;
 
-    const newOffset = direction === 'next'
-      ? paginatedData.nextOffset
-      : Math.max(0, currentOffset - 20);
+    const currentPage = paginatedData.pagination.currentPage;
+    const newPage = direction === 'next' ? currentPage + 1 : currentPage - 1;
 
-    if (direction === 'prev' && currentOffset === 0) return;
-    if (direction === 'next' && !paginatedData.hasMore) return;
+    if (direction === 'prev' && currentPage === 1) return;
+    if (direction === 'next' && !paginatedData.pagination.hasNextPage) return;
 
     setIsLoading(true);
     try {
-      const response = await getUserUsage(session, newOffset || 0);
-      setPaginatedData({
-        items: response.data.items,
-        hasMore: response.data.has_more,
-        nextOffset: response.data.next_offset,
+      const response = await fetch(`/api/user/usage-transactions?page=${newPage}&pageSize=20`, {
+        method: 'GET',
+        credentials: 'include',
       });
-      setCurrentOffset(newOffset || 0);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data: UsageTransactionsResponse = await response.json();
+      setPaginatedData({
+        items: data.data,
+        pagination: data.pagination,
+      });
     } catch (error) {
       console.error('Error fetching transactions:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [session, currentOffset, paginatedData.hasMore, paginatedData.nextOffset]);
+  }, [session, paginatedData.pagination.currentPage, paginatedData.pagination.hasNextPage]);
 
   const toggleExpand = useCallback((id: string) => {
     if (expandedItem === id) {
@@ -442,16 +448,17 @@ const groupTransactions = useCallback((transactions: UsageItem[]): SessionGroup[
       {filteredTransactions.length > 0 && (
         <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
           <span className="text-xs text-gray-500">
-            Showing {currentOffset + 1} - {currentOffset + filteredTransactions.length} transactions
+            Page {paginatedData.pagination.currentPage} of {paginatedData.pagination.totalPages} 
+            ({paginatedData.pagination.totalItems} total transactions)
           </span>
           
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => handlePageChange('prev')}
-              disabled={currentOffset === 0 || isLoading}
+              disabled={paginatedData.pagination.currentPage === 1 || isLoading}
               className={`px-3 py-1 text-xs bg-white rounded-md border border-gray-200 text-gray-600 transition-all duration-200
-                ${currentOffset === 0 || isLoading ? 
+                ${paginatedData.pagination.currentPage === 1 || isLoading ? 
                   'opacity-50 cursor-not-allowed' : 
                   'hover:border-blue-300 hover:text-blue-600 hover:shadow-sm hover:scale-[1.02] active:scale-[0.98]'
                 }`}
@@ -461,9 +468,9 @@ const groupTransactions = useCallback((transactions: UsageItem[]): SessionGroup[
             <button
               type="button"
               onClick={() => handlePageChange('next')}
-              disabled={!paginatedData.hasMore || isLoading}
+              disabled={!paginatedData.pagination.hasNextPage || isLoading}
               className={`px-3 py-1 text-xs bg-white rounded-md border border-gray-200 text-gray-600 transition-all duration-200
-                ${!paginatedData.hasMore || isLoading ? 
+                ${!paginatedData.pagination.hasNextPage || isLoading ? 
                   'opacity-50 cursor-not-allowed' : 
                   'hover:border-blue-300 hover:text-blue-600 hover:shadow-sm hover:scale-[1.02] active:scale-[0.98]'
                 }`}

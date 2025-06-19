@@ -7,7 +7,6 @@ import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { SearchBar } from "@/components/ui/search-bar"
 import { Model } from "@/types/models"
-import { fetchModels } from "@/lib/makehub-client" // Updated import
 import Image from 'next/image'
 
 interface ModelSelectorProps {
@@ -31,23 +30,24 @@ export function ModelSelector({ value, onValueChange, onSettingsClick }: ModelSe
 
   React.useEffect(() => {
     const getModels = async () => {
-      console.log('Fetching models...')
       try {
-        const response = await fetchModels()
-        console.log('Models fetched:', response)
-        if (response.error) throw new Error(response.error)
-        setModels(response.data)
-        console.log('Models set:', response.data.length, 'models available')
+        setLoading(true);
+        const response = await fetch('/api/models');
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        setModels(data);
       } catch (err) {
-        console.error('Error fetching models:', err)
-        setError(err instanceof Error ? err.message : 'Failed to load models')
+        setError(err instanceof Error ? err.message : 'Failed to fetch models');
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    getModels()
-  }, [])
+    getModels();
+  }, []);
 
   const formatPrice = (price: number) => {
     return `$${(price / 1000).toFixed(4)}`

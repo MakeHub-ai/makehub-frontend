@@ -8,7 +8,6 @@ import {
   CarouselItem,
 } from "@/components/ui/carousel";
 import { ModelCard } from "@/components/models/ModelCard";
-import { fetchModels } from "@/lib/makehub-client"; // Updated import
 import { getModelStats } from "@/utils/modelUtils";
 import type { Model } from "@/types/models";
 
@@ -16,8 +15,13 @@ function Case() {
   const [api, setApi] = useState<CarouselApi>();
   const [models, setModels] = useState<Model[]>([]);
   const [modelStats, setModelStats] = useState<Record<string, { providers: number; quantisations: string[] }>>({});
+  const [error, setError] = useState<string | null>(null);
 
   const generateModelUrl = (model: Model) => {
+    if (!model.organisation || !model.model_name) {
+      // Fallback or return a default URL if data is missing
+      return '/models';
+    }
     // Créer une ancre avec l'organisation et le nom du modèle
     const anchor = `${model.organisation.toLowerCase()}-${model.model_name.toLowerCase()}`.replace(/\s+/g, '-');
     return `/models#${anchor}`;
@@ -25,12 +29,19 @@ function Case() {
 
   useEffect(() => {
     const loadModels = async () => {
-      const response = await fetchModels();
-      if (response.data) {
-        const shuffled = [...response.data].sort(() => Math.random() - 0.5);
+      try {
+        const response = await fetch('/api/models');
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        const shuffled = [...data].sort(() => Math.random() - 0.5);
         setModels([...shuffled, ...shuffled]);
         // Calculer les statistiques pour tous les modèles
-        setModelStats(getModelStats(response.data));
+        setModelStats(getModelStats(data));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load models');
       }
     };
     loadModels();
@@ -64,6 +75,7 @@ function Case() {
           >
             <CarouselContent className="-ml-2 md:-ml-4 pt-4 pb-6 px-3 gap-1">
               {models.map((model, index) => {
+                if (!model.organisation || !model.model_name) return null;
                 const modelKey = `${model.organisation}/${model.model_name}`;
                 const stats = modelStats[modelKey] || { providers: 0, quantisations: [] };
                 return (

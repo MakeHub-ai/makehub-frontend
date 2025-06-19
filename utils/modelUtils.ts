@@ -72,9 +72,8 @@ export function sortProviders(groupedModels: { [key: string]: Model[] }): [strin
     });
 }
 
-// Supprimer l'ancienne version de getModelStats et garder uniquement celle-ci
 export function getModelStats(allModels: Model[]) {
-  const stats: Record<string, { providers: number; quantisations: ("fp8" | "fp16")[] }> = {};
+  const stats: Record<string, { providers: number; quantisations: ("fp8" | "fp16")[]; maxContext: number | null }> = {};
   
   allModels.forEach(model => {
     const baseKey = model.model_id; // Use model_id as the base key
@@ -90,9 +89,12 @@ export function getModelStats(allModels: Model[]) {
           .filter((q): q is "fp8" | "fp16" => q !== null) // Ensure only valid quantisation values are included
       );
       
+      const maxContext = Math.max(...variants.map(m => m.context || 0));
+
       stats[baseKey] = {
         providers: uniqueProviders.size,
         quantisations: Array.from(uniqueQuantisations),
+        maxContext: maxContext > 0 ? maxContext : null,
       };
     }
   });

@@ -23,7 +23,7 @@ export function ModelDetailsDialog({ model, isOpen, onClose, allModels = [] }: M
     return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
   };
 
-  const modelOrganisation = model.model_id ? model.model_id.split('/')[0] : 'unknown';
+  const modelOrganisation = model.model_id.split('/')[0] || 'unknown';
 
   // Format quantization
   const formatQuantization = (quant: string | number | null | undefined): string | null => {
@@ -85,9 +85,9 @@ export function ModelDetailsDialog({ model, isOpen, onClose, allModels = [] }: M
   const formatTokenCount = (kValue: number | undefined | null): string => {
     if (kValue === undefined || kValue === null) return 'N/A';
     if (kValue >= 1000) { // e.g. 1000k = 1M
-        return `${(kValue / 1000).toLocaleString()}M tokens`;
+        return kValue >= 1e9 ? `${(kValue / 1e9).toLocaleString()}M tokens` : `${(kValue / 1e6).toLocaleString()}k tokens`;
     }
-    return `${kValue.toLocaleString()}k tokens`;
+    return `${kValue.toLocaleString()} tokens`;
   };
 
   const handleCopyId = async (id: string) => {
@@ -120,7 +120,7 @@ export function ModelDetailsDialog({ model, isOpen, onClose, allModels = [] }: M
     <AnimatePresence>
       {isOpen && (
         <Dialog open={isOpen} onOpenChange={onClose}>
-          <DialogContent className="sm:max-w-4xl bg-white/95 backdrop-blur-sm max-h-[90vh] overflow-y-auto p-0 rounded-xl">
+          <DialogContent className="grid h-full max-h-[90vh] grid-rows-[auto_1fr] rounded-xl bg-white/95 p-0 backdrop-blur-sm sm:max-w-4xl">
             <DialogHeader className="sticky top-0 z-10 bg-white/90 backdrop-blur-md px-6 pt-6 pb-4 border-b border-gray-100">
               <DialogTitle className="sr-only">
                 {`${model.model_name} Model Details`}
@@ -161,24 +161,17 @@ export function ModelDetailsDialog({ model, isOpen, onClose, allModels = [] }: M
                   </div>
                 </motion.div>
                 <div className="flex-1 min-w-0">
-                  <h2 className="text-2xl sm:text-3xl font-bold truncate">{model.model_name}</h2>
+                  <h2 className="text-2xl sm:text-3xl font-bold truncate">{model.display_name}</h2>
                   <p className="text-sm text-gray-500 mt-0.5 flex items-center gap-2">
                     <Building className="h-3.5 w-3.5" />
                     {modelOrganisation}
                   </p>
                 </div>
-                <Link 
-                  href="/docs" 
-                  className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 font-medium hover:bg-blue-50 py-1.5 px-3 rounded-full transition-colors shadow-sm border border-blue-100"
-                >
-                  <BookOpen className="h-4 w-4" />
-                  <span>View Documentation</span>
-                </Link>
               </motion.div>
               
             </DialogHeader>
 
-            <motion.div className="px-6 py-4" initial="hidden" animate="visible" variants={fadeIn}>
+            <motion.div className="overflow-y-auto px-6 py-4" initial="hidden" animate="visible" variants={fadeIn}>
               <AnimatePresence>
                 {/* Model IDs Section */}
                 <motion.div 
@@ -187,9 +180,6 @@ export function ModelDetailsDialog({ model, isOpen, onClose, allModels = [] }: M
                   animate={{ opacity: 1, y: 0 }}
                   className="space-y-4 mb-8"
                 >
-                  <div className="mb-2">
-                    <h3 className="text-sm font-medium text-gray-700 mb-2">Available Model IDs by Quantization</h3>
-                  </div>
                   
                   {/* Section for model IDs by quantization */}
                   <div className="space-y-3">

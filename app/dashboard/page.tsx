@@ -5,14 +5,40 @@ import { DashboardNav } from '@/components/dashboard/DashboardNav';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { UsageList } from '@/components/dashboard/UsageList';
 import { DashboardCharts } from '@/components/dashboard/DashboardCharts';
-import type { GraphItem, SavingsDataItem } from '@/types/dashboard';
+import type { GraphItem, SavingsDataItem, UsageTransactionsPaginated } from '@/types/dashboard';
 import { useDashboardData } from '@/hooks/use-dashboard-data';
 import { useAuth } from '@/contexts/auth-context';
 import { motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const { usageData, paginatedUsageData, isRefreshing, lastUpdated, refresh } = useDashboardData();
+  const { usageData, isRefreshing, lastUpdated, refresh } = useDashboardData();
+  const [transactionData, setTransactionData] = useState<UsageTransactionsPaginated | null>(null);
+
+  // Fetch transaction data using the new API
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+        const response = await fetch('/api/user/usage-transactions?page=1&pageSize=20', {
+          method: 'GET',
+          credentials: 'include',
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setTransactionData({
+            items: data.data,
+            pagination: data.pagination,
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching transactions:', error);
+      }
+    };
+
+    fetchTransactions();
+  }, []);
 
   const stats = usageData ? [
     {
@@ -115,8 +141,8 @@ export default function DashboardPage() {
             transition={{ delay: 0.3 }}
             className="space-y-4"
           >
-            {paginatedUsageData && (
-              <UsageList initialUsage={paginatedUsageData} />
+            {transactionData && (
+              <UsageList initialUsage={transactionData} />
             )}
           </motion.div>
         </motion.div>

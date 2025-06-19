@@ -112,6 +112,52 @@ export interface UsagePaginatedData {
   nextOffset: number | null;
 }
 
+// Nouveaux types pour l'intégration Supabase
+export interface UsageTransaction {
+  id: string;
+  timestamp: string;
+  type: 'api_call' | 'failed_request' | 'credit_purchase' | 'manual_credit';
+  amount: number;
+  formatted_amount: string;
+  transaction_type: 'credit' | 'debit';
+  description: string;
+  metadata: {
+    model?: string;
+    provider?: string;
+    input_tokens?: number;
+    output_tokens?: number;
+    cached_tokens?: number;
+    status?: string;
+    error_message?: string;
+    request_id?: string;
+    transaction_id: string;
+  };
+}
+
+export interface UsageTransactionsPaginated {
+  items: UsageTransaction[];
+  pagination: {
+    currentPage: number;
+    pageSize: number;
+    totalItems: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+  };
+}
+
+export interface UsageTransactionsResponse {
+  data: UsageTransaction[];
+  pagination: {
+    currentPage: number;
+    pageSize: number;
+    totalItems: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+  };
+}
+
 export interface StatCardProps {
   icon: React.ElementType; // Ou un type plus spécifique si tous les icônes viennent de lucide-react
   title: string;
