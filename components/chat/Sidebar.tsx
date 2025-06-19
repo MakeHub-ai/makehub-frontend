@@ -11,7 +11,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion, AnimatePresence, Variants } from "framer-motion"
+
 
 interface SidebarProps {
   // Callback to create a new chat, must return the created conversation
@@ -117,7 +118,7 @@ export function Sidebar({ onNewChat, onSelectChat, currentChatId, onClose, onDel
     }
   };
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     hidden: { opacity: 0, x: -20 },
     show: { 
       opacity: 1, 
@@ -125,6 +126,7 @@ export function Sidebar({ onNewChat, onSelectChat, currentChatId, onClose, onDel
       transition: { type: "spring", stiffness: 100, damping: 15 }
     }
   };
+
 
   return (
     <div className="flex flex-col h-full bg-gray-50 bg-opacity-70">
