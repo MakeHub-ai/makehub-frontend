@@ -126,7 +126,36 @@ export default function ProviderStatisticsPage() {
                 Detailed transaction history and usage patterns
               </p>
             </div>
-            <UsageList initialUsage={paginatedUsageData} />
+            <UsageList initialUsage={{
+              items: paginatedUsageData.items.map(item => ({
+                id: item.id,
+                timestamp: item.timestamp,
+                type: item.type === 'API Call' ? 'api_call' as const : 'failed_request' as const,
+                amount: parseFloat(item.units.replace('$', '')),
+                formatted_amount: item.units,
+                transaction_type: item.metadata.transaction_type as 'credit' | 'debit',
+                description: item.description,
+                metadata: {
+                  model: item.metadata.details.model,
+                  provider: item.metadata.details.provider,
+                  input_tokens: item.metadata.details.input_tokens ?? undefined,
+                  output_tokens: item.metadata.details.output_tokens ?? undefined,
+                  cached_tokens: undefined,
+                  status: item.metadata.details.status,
+                  error_message: item.metadata.details.error ?? undefined,
+                  request_id: item.id,
+                  transaction_id: item.id
+                }
+              })),
+              pagination: {
+                currentPage: 1,
+                pageSize: paginatedUsageData.items.length,
+                totalItems: paginatedUsageData.items.length,
+                totalPages: 1,
+                hasNextPage: paginatedUsageData.hasMore,
+                hasPreviousPage: false
+              }
+            }} />
           </div>
         )}
 
