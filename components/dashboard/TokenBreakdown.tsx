@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
 
 interface TokenBreakdownProps {
@@ -11,41 +11,40 @@ interface TokenBreakdownProps {
   isExpanded: boolean;
 }
 
-const variants = {
-  container: {
-    collapsed: { 
-      height: 0,
-      scaleY: 0.9,
-      opacity: 0,
-      transition: {
-        height: { duration: 0.2, ease: [0.32, 0.72, 0, 1] },
-        opacity: { duration: 0.15 }
-      }
-    },
-    expanded: { 
-      height: 'auto',
-      scaleY: 1,
-      opacity: 1,
-      transition: {
-        height: { duration: 0.2, ease: [0.32, 0.72, 0, 1] },
-        opacity: { duration: 0.15, delay: 0.05 },
-        staggerChildren: 0.05
-      }
+const containerVariants: Variants = {
+  collapsed: { 
+    height: 0,
+    scaleY: 0.9,
+    opacity: 0,
+    transition: {
+      height: { duration: 0.2, ease: [0.32, 0.72, 0, 1] as const },
+      opacity: { duration: 0.15 }
     }
   },
-  item: {
-    collapsed: { 
-      scale: 0.95,
-      opacity: 0,
-      y: -4,
-      transition: { duration: 0.2, ease: [0.32, 0.72, 0, 1] }
-    },
-    expanded: { 
-      scale: 1,
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.2, ease: [0.32, 0.72, 0, 1] }
+  expanded: { 
+    height: 'auto' as const,
+    scaleY: 1,
+    opacity: 1,
+    transition: {
+      height: { duration: 0.2, ease: [0.32, 0.72, 0, 1] as const },
+      opacity: { duration: 0.15, delay: 0.05 },
+      staggerChildren: 0.05
     }
+  }
+};
+
+const itemVariants: Variants = {
+  collapsed: { 
+    scale: 0.95,
+    opacity: 0,
+    y: -4,
+    transition: { duration: 0.2, ease: [0.32, 0.72, 0, 1] as const }
+  },
+  expanded: { 
+    scale: 1,
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.2, ease: [0.32, 0.72, 0, 1] as const }
   }
 };
 
@@ -61,7 +60,7 @@ export function TokenBreakdown({
       {isExpanded && (
         <motion.div
           className="overflow-hidden origin-top"
-          variants={variants.container}
+          variants={containerVariants}
           initial="collapsed"
           animate="expanded"
           exit="collapsed"
@@ -69,7 +68,7 @@ export function TokenBreakdown({
         >
           <motion.div 
             className="mt-2 grid grid-cols-3 gap-2"
-            variants={variants.item}
+            variants={itemVariants}
           >
             {/* Provider */}
             <div className="flex items-center bg-gray-50/50 rounded-lg p-2 border border-gray-100">
