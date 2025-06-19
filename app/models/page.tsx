@@ -142,11 +142,23 @@ export default function ModelsPage() {
   }
 
   const filteredModels = models.filter(model => {
-    const modelOrg = model.model_id ? model.model_id.split('/')[0] : '';
-    return (
-      (model.model_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (model.provider || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (modelOrg || '').toLowerCase().includes(searchTerm.toLowerCase())
+    if (!searchTerm.trim()) return true;
+    
+    const search = searchTerm.toLowerCase().trim();
+    
+    // Champs à rechercher
+    const searchFields = [
+      model.model_name || '',
+      model.display_name || '',
+      model.provider || '',
+      model.model_id || '',
+      // Parties séparées du model_id pour recherche flexible
+      ...(model.model_id ? model.model_id.split('/') : [])
+    ];
+    
+    // Recherche dans tous les champs
+    return searchFields.some(field => 
+      field.toLowerCase().includes(search)
     );
   });
 
