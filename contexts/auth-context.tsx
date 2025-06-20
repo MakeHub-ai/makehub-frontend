@@ -122,10 +122,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithGoogle = async () => {
+    console.log('Initiating Google sign-in');
+
+    const baseUrl = typeof window !== 'undefined'
+      ? window.location.origin 
+      : process.env.NEXT_PUBLIC_BASE_URL;
+    console.log('Base URL for redirect:', baseUrl);
+    
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_BASE_URL}/auth/callback`,
+        redirectTo: `${baseUrl}/auth/callback`,
       },
     });
     return { error };
@@ -133,11 +140,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGitHub = async () => {
     console.log('Initiating GitHub sign-in');
-    console.log('Redirect URL:', `${process.env.NEXT_PUBLIC_BASE_URL}/auth/callback`);
+    
+    const baseUrl = typeof window !== 'undefined' 
+    ? window.location.origin 
+    : process.env.NEXT_PUBLIC_BASE_URL;
+    console.log('Base URL for redirect:', baseUrl); 
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'github',
       options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_BASE_URL}/auth/callback`,
+        redirectTo: `${baseUrl}/auth/callback`,
       },
     });
     return { error };
