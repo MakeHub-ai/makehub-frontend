@@ -103,18 +103,17 @@ export function ModelCard({ models, display_name, onSelect, href }: ModelCardPro
               <div className="flex flex-col gap-1 mt-1">
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-gray-500 break-all">{bestModel.model_id}</span>
-                  <button
-                    onClick={(e) => handleCopy(bestModel.model_id, e)}
-                    aria-label={`Copier l'identifiant du modèle`}
-                    className="ml-1 p-1 rounded hover:bg-gray-100 transition-colors"
-                    tabIndex={0}
-                    type="button"
-                  >
-                    <CopyIcon className="w-4 h-4 text-gray-400 hover:text-blue-600" />
-                  </button>
-                  {copied === bestModel.model_id && (
-                    <span className="text-green-600 text-xs ml-1">Copié !</span>
-                  )}
+<motion.button
+  onClick={(e) => handleCopy(bestModel.model_id, e)}
+  aria-label={`Copier l'identifiant du modèle`}
+  className="ml-1 p-1 rounded hover:bg-gray-100 transition-colors"
+  tabIndex={0}
+  type="button"
+  animate={copied === bestModel.model_id ? { scale: 1.2, rotate: 15 } : { scale: 1, rotate: 0 }}
+  transition={{ duration: 0.18, type: "tween", ease: "easeOut" }}
+>
+  <CopyIcon className={`w-4 h-4 ${copied === bestModel.model_id ? "text-blue-600" : "text-gray-400 hover:text-blue-600"}`} />
+</motion.button>
                 </div>
               </div>
             </div>
