@@ -85,8 +85,8 @@ function Case() {
                   >
                     <div className="px-2">
                       <ModelCard
-                        model={model}
-                        stats={stats}
+                        models={[model]}
+                        display_name={model.display_name || model.model_name}
                         href={generateModelUrl(model)}
                         // className="w-full h-[160px] min-w-[320px] shadow-sm hover:shadow-md transition-shadow border border-gray-100 rounded-xl bg-white pt-2 pb-6 px-6 flex flex-col justify-start"
                       />

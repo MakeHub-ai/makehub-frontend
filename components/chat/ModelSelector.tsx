@@ -50,11 +50,11 @@ export function ModelSelector({ value, onValueChange, onSettingsClick }: ModelSe
   }, []);
 
   const formatPrice = (price: number) => {
-    return `$${(price / 1000).toFixed(4)}`
+    return `$${(price).toFixed(4)}`
   }
 
   const formatContext = (context: number) => {
-    return context >= 1000 ? `${(context / 1000)}k` : context
+    return `${(context)}k `
   }
 
   const groupModelsByName = (models: Model[]): GroupedModel[] => {

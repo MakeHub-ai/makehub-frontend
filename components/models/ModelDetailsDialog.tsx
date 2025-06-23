@@ -85,7 +85,7 @@ export function ModelDetailsDialog({ model, isOpen, onClose, allModels = [] }: M
   const formatTokenCount = (kValue: number | undefined | null): string => {
     if (kValue === undefined || kValue === null) return 'N/A';
     if (kValue >= 1000) { // e.g. 1000k = 1M
-        return kValue >= 1e9 ? `${(kValue / 1e9).toLocaleString()}M tokens` : `${(kValue / 1e6).toLocaleString()}k tokens`;
+        return kValue >= 1e6 ? `${(kValue / 1e6).toLocaleString()}M tokens` : `${(kValue / 1e3).toLocaleString()}k tokens`;
     }
     return `${kValue.toLocaleString()} tokens`;
   };
@@ -344,14 +344,18 @@ export function ModelDetailsDialog({ model, isOpen, onClose, allModels = [] }: M
                                         )}
                                       </div>
 
-                                      {/* Price */}
-                                      <div className="flex items-start gap-2">
+                                        {/* Price */}
+                                        <div className="flex items-start gap-2">
                                         <DollarSign className="h-4 w-4 text-gray-400 flex-shrink-0 mt-0.5" />
                                         <div className="flex flex-col text-sm">
-                                          <span className="text-gray-600 whitespace-nowrap">Input: {variant.price_per_input_token}$/1M</span>
-                                          <span className="text-gray-600 whitespace-nowrap">Output: {variant.price_per_output_token}$/1M</span>
+                                          <span className="text-gray-600 whitespace-nowrap">
+                                          Input: {(variant.price_per_input_token * 1000).toFixed(2)}$/1M
+                                          </span>
+                                          <span className="text-gray-600 whitespace-nowrap">
+                                          Output: {(variant.price_per_output_token * 1000).toFixed(2)}$/1M
+                                          </span>
                                         </div>
-                                      </div>
+                                        </div>
 
                                       {/* Context */}
                                       {variant.context !== undefined && variant.context !== null && (

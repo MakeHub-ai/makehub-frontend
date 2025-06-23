@@ -5,32 +5,38 @@ import { getModelStats } from '@/utils/modelUtils';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 
+type ModelGroup = {
+  display_name: string;
+  models: Model[];
+  [key: string]: any;
+};
+
 type ModelSectionProps = {
   title: string;
-  models: Model[];
-  allModels: Model[];  // All models for calculating stats
+  models: ModelGroup[];
+  allModels: Model[];
   onSelectModel: (model: Model) => void;
 };
 
 export function ModelSection({ title, models, allModels, onSelectModel }: ModelSectionProps) {
   const modelStats = getModelStats(allModels);
   const logoPath = `/model_logo/${title.toLowerCase()}.webp`;
-  
+
   const sectionVariants = {
     hidden: { opacity: 0, y: 20 },
-    visible: { 
-      opacity: 1, 
+    visible: {
+      opacity: 1,
       y: 0,
       transition: {
         staggerChildren: 0.1
       }
     }
   };
-  
+
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
-    visible: { 
-      opacity: 1, 
+    visible: {
+      opacity: 1,
       y: 0,
       transition: {
         type: "spring" as const,
@@ -41,7 +47,7 @@ export function ModelSection({ title, models, allModels, onSelectModel }: ModelS
   };
 
   return (
-    <motion.div 
+    <motion.div
       className="mb-20"
       variants={sectionVariants}
     >
@@ -69,32 +75,29 @@ export function ModelSection({ title, models, allModels, onSelectModel }: ModelS
           </div>
         </div>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {models.map((model, index) => {
-        // Use model.model_id as the key for stats, consistent with getModelStats
-        const statsKey = model.model_id;
-        // Créer une clé unique qui combine model_id + provider + index
-        // If `models` are already unique by model_id, model.model_id would suffice.
-        // Keeping uniqueKey as is for now, assuming `models` might not be pre-filtered to unique model_ids.
-        const uniqueKey = `${model.model_id}-${model.provider}-${index}`;
-        
-        return (
-          <motion.div
-            key={uniqueKey}
-            variants={cardVariants}
-            layout
-            className="group"
-            whileHover={{ y: -5 }}
-          >
-            <ModelCard 
-              model={model} 
-              stats={modelStats[statsKey]} // Use the correct key for stats
-              onSelect={onSelectModel}
-            />
-          </motion.div>
-        );
-      })}
+        {models.map((group, index) => {
+          // group.models est le tableau de Model pour ce display_name
+          const mainModel = group.models[0];
+          const uniqueKey = `${mainModel.model_id}-${mainModel.provider}-${index}`;
+          return (
+            <motion.div
+              key={uniqueKey}
+              variants={cardVariants}
+              layout
+              className="group"
+              whileHover={{ y: -5 }}
+            >
+              <ModelCard
+                models={group.models}
+                display_name={group.display_name}
+                onSelect={onSelectModel}
+                // Optionnel : stats={modelStats[mainModel.model_id]}
+              />
+            </motion.div>
+          );
+        })}
       </div>
     </motion.div>
   );

@@ -274,18 +274,36 @@ export default function ModelsPage() {
             >
               {sortedOrganizations.length > 0 ? (
                 sortedOrganizations.map(([organization, orgModels]) => {
-                  
+                  // Grouper par display_name à l'intérieur de chaque organisation
+                  // Regrouper tous les modèles de l'organisation par display_name (sans déduplication par model_id)
+                  const displayNameGroups: { [key: string]: Model[] } = {};
+                  // On prend tous les modèles de l'organisation dans filteredModels
+                  filteredModels
+                    .filter(m => {
+                      const org = m.model_id ? m.model_id.split('/')[0] : 'unknown';
+                      return org === organization && !!m.display_name;
+                    })
+                    .forEach((model) => {
+                      // TypeScript: display_name is guaranteed non-null due to filter above
+                      const displayName = model.display_name!;
+                      if (!displayNameGroups[displayName]) {
+                        displayNameGroups[displayName] = [];
+                      }
+                      displayNameGroups[displayName].push(model);
+                    });
+
                   return (
                     <ModelSection
                       key={organization}
                       title={capitalizeFirstLetter(organization)}
-                      models={orgModels.map((model, index) => ({
-                          ...model,
-                          // Créer un ID unique pour debugging
-                          elementId: `${model.model_id?.replace(/[\/\s.:]+/g, '-')}-${index}`,
-                          // Ajouter un debugId unique
-                          debugId: `${organization}-${index}-${model.model_id}`
-                      }))}
+                      models={
+                        Object.entries(displayNameGroups).map(([displayName, models]) => ({
+                          display_name: displayName,
+                          models,
+                          // Pour compatibilité descendante, on garde le premier model comme "model" (sans redéfinir display_name)
+                          ...Object.fromEntries(Object.entries(models[0]).filter(([k]) => k !== "display_name")),
+                        })) as any
+                      }
                       allModels={filteredModels}
                       onSelectModel={setSelectedModel}
                     />
