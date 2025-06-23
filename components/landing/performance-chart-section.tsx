@@ -164,7 +164,7 @@ export function PerformanceChartSection() {
       },
       title: {
         display: true,
-        text: 'Claude Sonnet 3.7',
+        text: 'Claude Sonnet 4',
         color: '#000000', // Changed to black
         font: {
           size: 20,

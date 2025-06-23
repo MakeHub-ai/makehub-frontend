@@ -45,32 +45,32 @@ interface Feature {
 const features = [
   {
     name: 'Smart Provider Routing',
-    description: 'Use your preferred models (GPT-4.5, Claude Opus 5, Llama 4 Maverick) while we routes requests to the optimal provider based on latency, uptime, throughput, and cost.',
+    description: 'Requests are always sent to the fastest and most reliable provider.',
     icon: 'Routing.svg',
   },
   {
     name: 'Instant Failover Protection',
-    description: 'When a provider experiences downtime or degraded performance, requests are automatically rerouted to alternative providers your users will never notice a thing.',
+    description: 'Automatic switch to another provider in case of outage.',
     icon: 'fallback.svg',
   },
   {
     name: 'One Unified API',
-    description: 'Access all major AI models through a single API endpoint, write your code once and switch between any model or provider without changing your implementation.',
+    description: 'One API to access all major AI models.',
     icon: 'unified.svg',
   },
   {
     name: 'Intelligent Cost Optimization',
-    description: 'Automatically route to the most cost-effective provider for each model, reducing your AI costs by up to 50% without compromising on quality or performance.',
+    description: 'Cut your AI costs by up to 50% with smart routing.',
     icon: 'money.svg',
   },
   {
     name: 'Universal Tool Compatibility',
-    description: 'Keep using your favorite agent frameworks and tools. Makehub ensures full compatibility with function calling, RAG, and other advanced features across all providers.',
+    description: 'Works with your favorite tools and frameworks.',
     icon: 'tool.svg',
   },
   {
     name: 'Real-Time Performance Monitoring',
-    description: 'Our system continuously benchmarks every provider and model combination, ensuring you always get the best performance based on current conditions, not outdated data.',
+    description: 'Continuous monitoring for the best performance.',
     icon: 'faster.svg',
   },
 ];
@@ -129,11 +129,6 @@ export function FeaturesOverviewSection() {
                   initial="hidden"
                   animate={controls}
                   variants={cardVariants}
-                  whileHover={{ 
-                    scale: 1.02, 
-                    boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)", // More pronounced shadow
-                    transition: { duration: 0.2 } 
-                  }}
                   className="relative group overflow-hidden rounded-2xl bg-white p-6 shadow-lg ring-1 ring-[#674AFF] transition-all duration-300 hover:shadow-xl min-h-[180px] flex flex-col justify-center"
                   onMouseEnter={() => setIsHovered(true)}
                   onMouseLeave={() => setIsHovered(false)}
@@ -166,7 +161,7 @@ export function FeaturesOverviewSection() {
                         exit={{ opacity: 0, y: -20 }}
                         transition={{ duration: 0.2 }}
                       >
-                        <dd className="text-base leading-7 text-gray-700">{feature.description}</dd>
+                        <dd className="text-base leading-7 text-gray-900 font-medium font-sans tracking-tight bg-gradient-to-r from-[#674AFF] to-[#00D4FF] bg-clip-text text-transparent drop-shadow-sm">{feature.description}</dd>
                       </motion.div>
                     )}
                   </AnimatePresence>
