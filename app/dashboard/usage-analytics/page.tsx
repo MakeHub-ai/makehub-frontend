@@ -48,11 +48,7 @@ export default function UsageAnalyticsPage() {
             <div>
               <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
                 <BarChart3 className="h-6 w-6 text-blue-600" />
-                Usage Analytics
               </h1>
-              <p className="text-gray-600 mt-1">
-                Comprehensive analytics and insights into your API usage patterns and trends.
-              </p>
             </div>
             <div className="flex items-center gap-4">
               {lastUpdated && (

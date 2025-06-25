@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { GraphItem } from '@/types/dashboard';
 import * as echarts from 'echarts/core';
-import { LineChart, PieChart, BarChart as EChartsBarChart } from 'echarts/charts';
+import { LineChart, BarChart as EChartsBarChart } from 'echarts/charts';
 import {
   GridComponent,
   TooltipComponent,
@@ -18,7 +18,6 @@ import { ChevronDown, ArrowRight, BarChart2 as ChartIcon } from 'lucide-react';
 // Register ECharts components
 echarts.use([
   LineChart,
-  PieChart,
   EChartsBarChart,
   GridComponent,
   TooltipComponent,
@@ -29,10 +28,119 @@ echarts.use([
 ]);
 
 import type { UsageItem } from '@/types/dashboard';
-
-
 import type { CostDistributionItem } from '@/types/dashboard';
 import type { SavingsDataItem } from '@/types/dashboard';
+import { CostEvolutionBarChart } from '@/components/dashboard/charts/CostEvolutionBarChart';
+import { AggregatedCostEvolutionChart } from '@/components/dashboard/charts/AggregatedCostEvolutionChart';
+import MinimalCostPieChart from './MinimalCostPieChart';
+import dynamic from 'next/dynamic';
+
+// Dynamically import the chart for SSR safety
+const CostEstimationForecastChart = dynamic(() => import('./CostEstimationForecastChart'), { ssr: false });
+
+function CostEstimationForecastChartWrapper() {
+  const [dailyCosts, setDailyCosts] = useState<number[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    fetch('/api/user/daily-costs-this-month')
+      .then(res => res.json())
+      .then(json => {
+        if (json.error) throw new Error(json.error);
+        setDailyCosts(json.data || []);
+      })
+      .catch(e => {
+        setDailyCosts([]);
+        setError(e.message);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="w-full h-64 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-b-indigo-600 border-indigo-300"></div>
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="w-full h-64 flex items-center justify-center text-red-500">
+        {error}
+      </div>
+    );
+  }
+  if (!dailyCosts || dailyCosts.length === 0) {
+    return (
+      <div className="w-full h-64 flex items-center justify-center text-gray-400">
+        No cost data for this month.
+      </div>
+    );
+  }
+  return <CostEstimationForecastChart dailyCosts={dailyCosts} />;
+}
+
+// ProviderPieChart component
+function ProviderPieChart() {
+  const [tokenData, setTokenData] = useState<{ name: string; value: number }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    fetch('/api/user/provider-cost-distribution?period_days=7')
+      .then(res => res.json())
+      .then(json => {
+        if (json.error) throw new Error(json.error);
+        setTokenData(
+          (json.data || [])
+            .filter((d: any) => d.total_tokens > 0)
+            .map((d: any) => ({
+              name: d.provider,
+              value: Number(d.total_tokens),
+            }))
+        );
+      })
+      .catch(e => {
+        setTokenData([]);
+        setError(e.message);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: 0.2 }}
+      className="overflow-hidden flex flex-col h-[400px]"
+    >
+      <div className="bg-gradient-to-r from-gray-50 to-white px-4 py-3 border-b border-gray-100">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-medium text-[#111827]">Provider Distribution</h3>
+        </div>
+      </div>
+      <div className="flex-1 p-4 flex flex-col items-center justify-center">
+        {loading ? (
+          <div className="flex items-center justify-center w-full h-full">
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-b-indigo-600 border-indigo-300"></div>
+          </div>
+        ) : error ? (
+          <div className="text-sm text-red-500">{error}</div>
+        ) : (
+          <MinimalCostPieChart
+            data={tokenData}
+            mode="tokens"
+          />
+        )}
+      </div>
+    </motion.div>
+  );
+}
 
 interface DashboardChartsProps {
   graphItems: GraphItem[];
@@ -42,15 +150,47 @@ interface DashboardChartsProps {
   savingsData?: SavingsDataItem[];
 }
 export function DashboardCharts({ graphItems, isLoading = false, usedThisMonth, cost_distribution = [], savingsData = [] }: DashboardChartsProps) {
-  const modelDistributionChartRef = useRef<HTMLDivElement>(null);
+  const [pieRawData, setPieRawData] = useState<any[]>([]);
+  const [costPieData, setCostPieData] = useState<{ name: string; value: number }[]>([]);
+  const [tokenPieData, setTokenPieData] = useState<{ name: string; value: number }[]>([]);
+  const [pieMode, setPieMode] = useState<'cost' | 'tokens'>('cost');
+  const [loadingPie, setLoadingPie] = useState(true);
+  const [pieError, setPieError] = useState<string | null>(null);
   const requestCountChartRef = useRef<HTMLDivElement>(null);
-  const costByModelChartRef = useRef<HTMLDivElement>(null);
-  
-  const [modelDistributionChart, setModelDistributionChart] = useState<echarts.ECharts | null>(null);
   const [requestCountChart, setRequestCountChart] = useState<echarts.ECharts | null>(null);
-  const [costByModelChart, setCostByModelChart] = useState<echarts.ECharts | null>(null);
-  const [activeChartTab, setActiveChartTab] = useState<'models' | 'requests'>('models');
-  const [chartDataReady, setChartDataReady] = useState(false);
+
+  useEffect(() => {
+    setLoadingPie(true);
+    setPieError(null);
+    fetch('/api/user/model-cost-distribution?period_days=7')
+      .then(res => res.json())
+      .then(json => {
+        if (json.error) throw new Error(json.error);
+        setPieRawData(json.data || []);
+        setCostPieData(
+          (json.data || [])
+            .filter((d: any) => d.total_cost > 0)
+            .map((d: any) => ({
+              name: d.model,
+              value: Number(d.total_cost) / 1000, // Correction ici
+            }))
+        );
+        setTokenPieData(
+          (json.data || [])
+            .filter((d: any) => d.total_tokens > 0)
+            .map((d: any) => ({
+              name: d.model,
+              value: Number(d.total_tokens),
+            }))
+        );
+      })
+      .catch(e => {
+        setCostPieData([]);
+        setTokenPieData([]);
+        setPieError(e.message);
+      })
+      .finally(() => setLoadingPie(false));
+  }, []);
 
   // Génération de données aléatoires cumulées pour le mois courant
   const [costEstimationData] = useState(() => {
@@ -101,33 +241,7 @@ export function DashboardCharts({ graphItems, isLoading = false, usedThisMonth, 
     };
   });
 
-  // Process data for model distribution chart
-  const processModelData = () => {
-    if (!graphItems.length) return [];
-
-    // Compte les occurrences de chaque modèle
-    const modelCounts = graphItems.reduce((acc: { [key: string]: number }, item) => {
-      acc[item.model] = item.usage_count;
-      return acc;
-    }, {});
-
-    // Convertit en format ECharts et trie par nombre d'utilisations
-    const sortedModels = Object.entries(modelCounts)
-      .map(([model, count]) => ({ name: model, value: count }))
-      .sort((a, b) => b.value - a.value);
-
-    // Garde les 9 premiers modèles et regroupe le reste dans "Others"
-    if (sortedModels.length > 10) {
-      const topModels = sortedModels.slice(0, 9);
-      const othersValue = sortedModels
-        .slice(9)
-        .reduce((sum, item) => sum + item.value, 0);
-      
-      return [...topModels, { name: 'Others', value: othersValue }];
-    }
-
-    return sortedModels;
-  };
+  // Plus de processModelData (pie chart ECharts supprimé)
 
   // Process data for request count chart (using model usage counts)
   const processRequestCountData = () => {
@@ -174,92 +288,12 @@ export function DashboardCharts({ graphItems, isLoading = false, usedThisMonth, 
     if (isLoading) return;
 
     // Initialize charts if they don't exist yet
-    if (!modelDistributionChart && modelDistributionChartRef.current) {
-      setModelDistributionChart(echarts.init(modelDistributionChartRef.current));
-    }
-    
     if (!requestCountChart && requestCountChartRef.current) {
       setRequestCountChart(echarts.init(requestCountChartRef.current));
     }
 
-    if (!costByModelChart && costByModelChartRef.current) {
-      setCostByModelChart(echarts.init(costByModelChartRef.current));
-    }
-
     const timer = setTimeout(() => {
-      // Update Model Distribution Chart
-      if (modelDistributionChart) {
-        const modelData = processModelData();
-        
-        modelDistributionChart.setOption({
-          backgroundColor: 'transparent',
-          tooltip: {
-            trigger: 'item',
-            formatter: (params: any) => {
-              return `<div class="font-medium text-gray-900">${params.name}</div>
-                    <div class="text-blue-600">${params.value} requests</div>
-                    <div class="text-xs text-gray-500">${params.percent}% of total</div>`;
-            },
-            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-            borderColor: '#e5e7eb',
-            textStyle: {
-              color: '#374151'
-            },
-            extraCssText: 'box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05); border-radius: 6px; padding: 10px;'
-          },
-          legend: { show: false },
-          series: [{
-            name: 'Model Usage',
-            type: 'pie',
-            radius: ['35%', '65%'],
-            center: ['50%', '45%'],
-            avoidLabelOverlap: true,
-            itemStyle: {
-              borderRadius: 10,
-              borderColor: '#fff',
-              borderWidth: 2
-            },
-            label: {
-              show: false
-            },
-            emphasis: {
-              label: {
-                show: true,
-                fontSize: 14,
-                fontWeight: 'bold'
-              },
-              itemStyle: {
-                shadowBlur: 10,
-                shadowOffsetX: 0,
-                shadowColor: 'rgba(0, 0, 0, 0.2)'
-              }
-            },
-            labelLine: {
-              show: false
-            },
-            data: modelData,
-            // Animation
-            animationType: 'scale',
-            animationEasing: 'elasticOut',
-            animationDelay: function (idx: number) {
-              return idx * 100;
-            }
-          }],
-          color: [
-            '#8b5cf6', // Violet de départ
-            '#7c66f7',
-            '#6d70f7',
-            '#5e7af8',
-            '#4f84f8',
-            '#408ef9',
-            '#3b82f6', // Bleu d'arrivée
-            '#3b82f6',
-            '#3b82f6',
-            '#6b7280' // Gris pour "Others"
-          ]
-        });
-      }
-
+      // Plus de Model Distribution Chart (supprimé)
       // Update Request Count Chart
       if (requestCountChart) {
         // Use fake data for cost estimation with Makehub theme colors and English text
@@ -405,107 +439,13 @@ export function DashboardCharts({ graphItems, isLoading = false, usedThisMonth, 
         });
       }
 
-      // Update Cost by Model Chart
-      if (costByModelChart) {
-        const costData = processCostByModelData();
-        
-        costByModelChart.setOption({
-          backgroundColor: 'transparent',
-          tooltip: {
-            trigger: 'axis',
-            axisPointer: {
-              type: 'shadow'
-            },
-            formatter: (params: any) => {
-              let total = params.reduce((sum: number, series: any) => sum + (series.value || 0), 0);
-              let result = `<div class="font-medium text-gray-900">${params[0].name}</div>`;
-              
-              // Filter out series with zero or null values
-              params.filter((series: { value: number | undefined }) => series.value && series.value > 0)
-                    .forEach((series: any) => {
-                const percentage = ((series.value || 0) / total * 100).toFixed(1);
-                result += `<div style="display: flex; align-items: center; margin: 3px 0;">
-                  <span style="display: inline-block; width: 10px; height: 10px; background-color: ${series.color}; border-radius: 50%; margin-right: 5px;"></span>
-                  <span>${series.seriesName}: $${series.value.toFixed(5)} (${percentage}%)</span>
-                </div>`;
-              });
-              
-              result += `<div class="font-medium mt-2">Total: $${total.toFixed(5)}</div>`;
-              return result;
-            },
-            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-            borderColor: '#e5e7eb',
-            textStyle: {
-              color: '#374151'
-            },
-            extraCssText: 'box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05); border-radius: 6px; padding: 10px;'
-          },
-          legend: { show: false },
-          grid: {
-            left: '3%',
-            right: '4%',
-            bottom: '15%',
-            top: '5%',
-            containLabel: true
-          },
-          xAxis: {
-            type: 'category',
-            data: costData.dates,
-            axisLabel: {
-              color: '#374151',
-              fontSize: 10,
-              rotate: 45
-            },
-            axisLine: {
-              lineStyle: {
-                color: '#e5e7eb'
-              }
-            }
-          },
-          yAxis: {
-            type: 'value',
-            name: 'Cost ($)',
-            nameTextStyle: {
-              color: '#374151',
-              fontSize: 12,
-              padding: [0, 0, 10, 0]
-            },
-            axisLabel: {
-              formatter: '${value}',
-              color: '#374151',
-              fontSize: 10
-            },
-            splitLine: {
-              lineStyle: {
-                color: '#e5e7eb',
-                type: 'dashed'
-              }
-            }
-          },
-          series: costData.series,
-          color: [
-            '#8b5cf6',
-            '#7c66f7',
-            '#6d70f7',
-            '#5e7af8',
-            '#4f84f8',
-            '#408ef9',
-            '#3b82f6',
-            '#60a5fa',
-            '#93c5fd',
-            '#bfdbfe'
-          ]
-        });
-      }
 
-      setChartDataReady(true);
+      
     }, 300); // Small delay for smoother rendering
 
     // Window resize handler
     const handleResize = () => {
-      modelDistributionChart?.resize();
       requestCountChart?.resize();
-      costByModelChart?.resize();
     };
 
     window.addEventListener('resize', handleResize);
@@ -514,14 +454,12 @@ export function DashboardCharts({ graphItems, isLoading = false, usedThisMonth, 
       window.removeEventListener('resize', handleResize);
       clearTimeout(timer);
     };
-  }, [graphItems, isLoading, modelDistributionChart, requestCountChart, costByModelChart]);
+  }, [graphItems, isLoading, requestCountChart]);
 
   // Clean up charts on unmount
   useEffect(() => {
     return () => {
-      modelDistributionChart?.dispose();
       requestCountChart?.dispose();
-      costByModelChart?.dispose();
     };
   }, []);
 
@@ -564,57 +502,70 @@ export function DashboardCharts({ graphItems, isLoading = false, usedThisMonth, 
     <div className="space-y-6">
       {/* Charts Grid */}
       <div className="grid grid-cols-1 gap-6">
-        {/* Cost by Model Chart */}
+        {/* Aggregated Cost Evolution Bar Chart */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: chartDataReady ? 1 : 0, y: chartDataReady ? 0 : 20 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
-          className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-[400px]"
         >
-          <div className="bg-gradient-to-r from-gray-50 to-white px-4 py-3 border-b border-gray-100">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-medium text-gray-700">Cost Distribution by Model</h3>
-            </div>
-          </div>
-          <div className="flex-1 p-4">
-            <div ref={costByModelChartRef} className="w-full h-full" />
-          </div>
+          <AggregatedCostEvolutionChart />
         </motion.div>
 
         {/* Original Charts Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: chartDataReady ? 1 : 0, y: chartDataReady ? 0 : 20 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-[400px]"
+            className="overflow-hidden flex flex-col h-[400px]"
           >
             <div className="bg-gradient-to-r from-gray-50 to-white px-4 py-3 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-medium text-gray-700">Model Distribution</h3>
               </div>
             </div>
-            <div className="flex-1 p-4">
-              <div ref={modelDistributionChartRef} className="w-full h-full" />
+            <div className="flex-1 p-4 flex flex-col items-center justify-center">
+              <div className="mb-4 flex items-center bg-gray-100 rounded-xl p-1 self-end">
+                <button
+                  onClick={() => setPieMode('cost')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    pieMode === 'cost'
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                >
+                  Cost ($)
+                </button>
+                <button
+                  onClick={() => setPieMode('tokens')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    pieMode === 'tokens'
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                >
+                  Tokens
+                </button>
+              </div>
+              {loadingPie ? (
+                <div className="flex items-center justify-center w-full h-full">
+                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-b-indigo-600 border-indigo-300"></div>
+                </div>
+              ) : pieError ? (
+                <div className="text-sm text-red-500">{pieError}</div>
+              ) : (
+                <MinimalCostPieChart
+                  data={pieMode === 'cost' ? costPieData : tokenPieData}
+                  mode={pieMode}
+                />
+              )}
             </div>
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: chartDataReady ? 1 : 0, y: chartDataReady ? 0 : 20 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-[400px]"
-          >
-            <div className="bg-gradient-to-r from-gray-50 to-white px-4 py-3 border-b border-gray-100">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-medium text-[#111827]">Cost Estimation (MakeHub)</h3>
-              </div>
-            </div>
-            <div className="flex-1 p-4">
-              <div ref={requestCountChartRef} className="w-full h-full" />
-            </div>
-          </motion.div>
+          {/* Provider Cost/Token Pie Chart */}
+          <ProviderPieChart />
         </div>
+        <CostEstimationForecastChartWrapper />
       </div>
     </div>
   );

@@ -124,7 +124,6 @@ export default function DashboardPage() {
             className="space-y-4"
           >
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Usage Analytics</h3>
             </div>
             <DashboardCharts
               graphItems={usageData?.graph_items as GraphItem[] || []}

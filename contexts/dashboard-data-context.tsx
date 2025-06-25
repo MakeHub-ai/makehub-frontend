@@ -23,6 +23,7 @@ interface ApiRequest extends BaseApiRequest {
     amount: number;
     type: string;
   } | null;
+  display_name?: string;
 }
 
 // Cache management for localStorage persistence
@@ -104,13 +105,24 @@ async function getUserUsageData(offset: number = 0): Promise<{ data: UsageRespon
         return res.json();
       }),
       
-      fetch(`/api/user/requests?page=1&pageSize=${20 + offset}`, {
-        method: 'GET',
-        credentials: 'include',
-      }).then(res => {
-        if (!res.ok) throw new Error(`Failed to fetch requests: ${res.status}`);
-        return res.json() as Promise<{ data: ApiRequest[]; pagination: any; }>;
-      }),
+      // Récupérer toutes les pages de requêtes utilisateur (pagination)
+      (async () => {
+        let allRequests: ApiRequest[] = [];
+        let page = 1;
+        let hasNextPage = true;
+        while (hasNextPage) {
+          const res = await fetch(`/api/user/requests?page=${page}&pageSize=100`, {
+            method: 'GET',
+            credentials: 'include',
+          });
+          if (!res.ok) throw new Error(`Failed to fetch requests: ${res.status}`);
+          const json = await res.json() as { data: ApiRequest[]; pagination: any; };
+          allRequests = allRequests.concat(json.data);
+          hasNextPage = json.pagination?.hasNextPage;
+          page++;
+        }
+        return { data: allRequests, pagination: { hasNextPage: false } };
+      })(),
 
       fetch('/api/user/provider-statistics', {
         method: 'GET',
@@ -120,11 +132,6 @@ async function getUserUsageData(offset: number = 0): Promise<{ data: UsageRespon
         return res.json();
       })
     ]);
-
-    // Logs pour débugger les réponses des API
-    console.log('🔍 Dashboard Data - User Stats Response:', userStatsResponse);
-    console.log('🔍 Dashboard Data - Requests Response:', requestsResponse);
-    console.log('🔍 Dashboard Data - Provider Stats Response:', providerStatsResponse);
 
     const userStats = userStatsResponse.data as UserStats;
     const providerStats = providerStatsResponse.data || [];
@@ -354,27 +361,79 @@ function generateSavingsDataFromRequests(requests: ApiRequest[], providerCostMap
  * Génère la distribution des coûts depuis les requêtes avec les vrais montants des transactions
  */
 function generateCostDistributionFromRequestsWithTransactions(requests: ApiRequest[]): CostDistributionItem[] {
-  const costByDate: { [date: string]: { total: number; models: { [model: string]: number } } } = {};
-  
+  const costByDate: { [date: string]: { total: number; models: { [key: string]: number } } } = {};
+
+  // Collecter tous les modèles uniques avec leurs display names
+  const allModels = new Set<string>();
+
   requests.forEach(request => {
     if (request.status === 'completed' && request.transactions) {
       const date = new Date(request.created_at).toISOString().split('T')[0];
       const cost = Math.abs(request.transactions.amount);
-      const modelKey = `${request.provider}/${request.model}`;
-      
+      const tokens = Math.round((request.input_tokens || 0) + (request.output_tokens || 0));
+      // Utiliser le display_name si disponible, sinon fallback sur provider/model
+      const modelKey = request.display_name || `${request.provider}/${request.model}`;
+
+      allModels.add(modelKey);
+
       if (!costByDate[date]) {
         costByDate[date] = { total: 0, models: {} };
       }
       costByDate[date].total += cost;
       costByDate[date].models[modelKey] = (costByDate[date].models[modelKey] || 0) + cost;
+      costByDate[date].models[modelKey + '_tokens'] = (costByDate[date].models[modelKey + '_tokens'] || 0) + tokens;
     }
   });
 
-  return Object.entries(costByDate).map(([date, data]) => ({
-    date,
-    total_cost: data.total,
-    models: data.models
-  })).slice(-30); // Derniers 30 jours
+  // Déterminer la plage de dates (depuis la première transaction jusqu'à aujourd'hui)
+  const dates = Object.keys(costByDate).sort();
+  if (dates.length === 0) {
+    // Si pas de données, retourner les 30 derniers jours avec des zéros
+    const result: CostDistributionItem[] = [];
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      result.push({
+        date: dateStr,
+        total_cost: 0,
+        models: {}
+      });
+    }
+    return result;
+  }
+
+  const firstDate = new Date(dates[0]);
+  const lastDate = new Date();
+  
+  // Générer tous les jours entre la première date et aujourd'hui
+  const result: CostDistributionItem[] = [];
+  const currentDate = new Date(firstDate);
+  
+  while (currentDate <= lastDate) {
+    const dateStr = currentDate.toISOString().split('T')[0];
+    const dayData = costByDate[dateStr];
+    
+    if (dayData) {
+      // Jour avec des données
+      result.push({
+        date: dateStr,
+        total_cost: dayData.total,
+        models: dayData.models
+      });
+    } else {
+      // Jour sans données - ajouter avec des zéros
+      result.push({
+        date: dateStr,
+        total_cost: 0,
+        models: {}
+      });
+    }
+    
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+
+  return result;
 }
 
 /**
