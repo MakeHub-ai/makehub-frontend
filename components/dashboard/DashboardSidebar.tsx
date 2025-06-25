@@ -85,8 +85,16 @@ export function DashboardSidebar({ className }: DashboardSidebarProps) {
   const pathname = usePathname();
 
   const sidebarVariants = {
-    expanded: { width: '280px' },
-    collapsed: { width: '80px' }
+    expanded: { 
+      width: '280px',
+      minWidth: '280px',
+      maxWidth: '280px'
+    },
+    collapsed: { 
+      width: '80px',
+      minWidth: '80px',
+      maxWidth: '80px'
+    }
   };
 
   const itemVariants = {
@@ -97,12 +105,16 @@ export function DashboardSidebar({ className }: DashboardSidebarProps) {
   return (
     <motion.div
       className={cn(
-        'bg-white border-r border-gray-200 flex flex-col h-full shadow-sm',
+        'bg-white border-r border-gray-200 flex flex-col h-full shadow-sm overflow-hidden dashboard-sidebar',
         className
       )}
       variants={sidebarVariants}
       animate={isCollapsed ? 'collapsed' : 'expanded'}
       transition={{ duration: 0.3, ease: 'easeInOut' }}
+      style={{ 
+        overflowX: 'hidden',
+        contain: 'layout style'
+      }}
     >
       {/* Header */}
       <div className="p-4 border-b border-gray-100 flex items-center justify-between">
@@ -154,14 +166,14 @@ export function DashboardSidebar({ className }: DashboardSidebarProps) {
                 />
                 {!isCollapsed && (
                   <motion.div
-                    className="ml-3 flex-1"
+                    className="ml-3 flex-1 min-w-0"
                     variants={itemVariants}
                     animate={isCollapsed ? 'collapsed' : 'expanded'}
                     transition={{ duration: 0.2 }}
                   >
-                    <div className="flex flex-col">
-                      <span className="truncate">{item.name}</span>
-                      <span className="text-xs text-gray-500 truncate mt-0.5">
+                    <div className="flex flex-col min-w-0">
+                      <span className="truncate break-words">{item.name}</span>
+                      <span className="text-xs text-gray-500 truncate break-words mt-0.5">
                         {item.description}
                       </span>
                     </div>
