@@ -80,7 +80,10 @@ export function ModelSection({ title, models, allModels, onSelectModel }: ModelS
         {models.map((group, index) => {
           // group.models est le tableau de Model pour ce display_name
           const mainModel = group.models[0];
-          const uniqueKey = `${mainModel.model_id}-${mainModel.provider}-${index}`;
+          // Correction : clé vraiment unique pour les familles, en utilisant family_id si présent dans group
+          const uniqueKey = group.family_id
+            ? `family-${group.family_id}`
+            : `${mainModel.model_id}-${mainModel.provider}-${group.display_name || ''}-${index}`;
           return (
             <motion.div
               key={uniqueKey}
