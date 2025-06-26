@@ -157,3 +157,53 @@
   border-collapse: collapse;
   margin: 1rem 0;
 }
+
+/* Dashboard Layout Fixes for Cross-Platform Compatibility */
+.dashboard-container {
+  overflow-x: hidden !important;
+  contain: layout style;
+}
+
+.dashboard-sidebar {
+  overflow-x: hidden !important;
+  contain: layout style;
+  box-sizing: border-box;
+}
+
+.dashboard-content {
+  overflow-x: hidden !important;
+  min-width: 0;
+  flex: 1;
+}
+
+/* Platform-specific scrollbar handling */
+.dashboard-sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dashboard-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dashboard-sidebar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+}
+
+.dashboard-sidebar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* Firefox scrollbar styling */
+.dashboard-sidebar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
+}
+
+/* Text overflow prevention */
+.text-overflow-safe {
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}

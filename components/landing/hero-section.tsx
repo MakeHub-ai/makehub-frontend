@@ -29,6 +29,27 @@ export function HeroSection() {
 
       <div className="container mx-auto max-w-7xl px-4 pt-24 pb-8 sm:py-20 relative">
         <div className="mx-auto max-w-5xl text-center relative">
+          {/* Product Hunt Badge */}
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="mt-4 mb-6 flex justify-center"
+          >
+            <a 
+              href="https://www.producthunt.com/products/makehub-ai?embed=true&utm_source=badge-featured&utm_medium=badge&utm_source=badge-makehub-ai" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="transition-transform hover:scale-105"
+            >
+              <img 
+                src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=982637&theme=light&t=1750761805062" 
+                alt="MakeHub.ai - LLM Provider arbitrage to get the best performance for the $ | Product Hunt" 
+                className="w-[200px] h-[43px] sm:w-[250px] sm:h-[54px]"
+              />
+            </a>
+          </motion.div>
+
             <motion.h1 
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}

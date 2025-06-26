@@ -45,14 +45,16 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="fixed inset-0 top-20 bg-gray-50 flex">
+    <div className="fixed inset-0 top-20 bg-gray-50 flex overflow-hidden dashboard-container">
       {/* Sidebar */}
       <DashboardSidebar className="flex-shrink-0" />
       
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <main className="flex-1 overflow-y-auto">
-          {children}
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0 dashboard-content">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden">
+          <div className="min-h-full">
+            {children}
+          </div>
         </main>
       </div>
     </div>
