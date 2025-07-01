@@ -31,7 +31,6 @@ export default function ModelsPage() {
           setError(errorData.message || `HTTP error! status: ${response.status}`);
         } else {
           const data = await response.json();
-          console.log('[Family Debug] Fetched /api/models response:', data);
           setModels(data.models || []);
           setFamilies(data.families || []);
         }
@@ -49,7 +48,6 @@ export default function ModelsPage() {
   }, []);
 
   useEffect(() => {
-    console.log('[Family Debug] families state after fetch:', families);
   }, [families]);
 
   const groupModelsByOrganization = useCallback((allModels: Model[]) => {
