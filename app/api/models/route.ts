@@ -7,19 +7,20 @@ export async function GET() {
     // Pas besoin d'auth pour la liste des modèles - c'est public
     const supabaseServer = createServiceRoleClient()
     
-    const { data, error } = await supabaseServer
+    // Récupération des modèles
+    const { data: modelsData, error: modelsError } = await supabaseServer
       .from('models')
       .select('*')
 
-    if (error) {
-      console.error('Error fetching models:', error)
+    if (modelsError) {
+      console.error('Error fetching models:', modelsError)
       return NextResponse.json(
-        { message: 'Error fetching models', error: error.message },
+        { message: 'Error fetching models', error: modelsError.message },
         { status: 500 }
       )
     }
 
-    const modelsWithOrg = data?.map(model => {
+    const modelsWithOrg = modelsData?.map(model => {
       const parts = model.model_id.split('/');
       const organisation = parts[0] || 'unknown';
       const model_name = parts[1] || model.display_name || 'Unknown Model';
@@ -57,7 +58,32 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json(modelsWithOrg || [])
+    // Récupération des familles
+    const { data: familiesData, error: familiesError } = await supabaseServer
+      .from('family')
+      .select('*')
+
+    if (familiesError) {
+      console.error('Error fetching families:', familiesError)
+      return NextResponse.json(
+        { message: 'Error fetching families', error: familiesError.message },
+        { status: 500 }
+      )
+    }
+
+    // Parse routing_config for families
+    const familiesWithParsedConfig = familiesData?.map(family => ({
+      ...family,
+      routing_config: typeof family.routing_config === 'string' 
+        ? JSON.parse(family.routing_config) 
+        : family.routing_config
+    })) || []
+
+    // Réponse enrichie avec les familles et leur routing_config
+    return NextResponse.json({
+      models: modelsWithOrg || [],
+      families: familiesWithParsedConfig
+    })
   } catch (e: any) {
     console.error('Unexpected error fetching models:', e)
     return NextResponse.json(

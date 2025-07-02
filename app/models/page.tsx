@@ -2,18 +2,23 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { Search, Filter, X, Loader2 } from 'lucide-react';
-import type { Model } from '@/types/models';
+import type { Model, Family } from '@/types/models';
 import { groupModelsByBase, sortProviders, sortModelsByProviderCount, sortOrganizationsByAverageProviders } from '@/utils/modelUtils';
 import { ModelSection } from '@/components/models/ModelSection';
 import { ModelDetailsDialog } from '@/components/models/ModelDetailsDialog';
+import { FamilySection } from '@/components/models/FamilySection';
+import { FamilyDetailsDialog } from '@/components/models/FamilyDetailsDialog';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function ModelsPage() {
   const [models, setModels] = useState<Model[]>([]);
+  const [families, setFamilies] = useState<Family[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedModel, setSelectedModel] = useState<Model | null>(null);
+  const [selectedFamily, setSelectedFamily] = useState<Family | null>(null);
+  const [familyDialogOpen, setFamilyDialogOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
 
   useEffect(() => {
@@ -26,7 +31,8 @@ export default function ModelsPage() {
           setError(errorData.message || `HTTP error! status: ${response.status}`);
         } else {
           const data = await response.json();
-          setModels(data);
+          setModels(data.models || []);
+          setFamilies(data.families || []);
         }
       } catch (err) {
         setError('Failed to fetch models');
@@ -36,8 +42,13 @@ export default function ModelsPage() {
       }
     };
 
+    // Debug: log families state on update
+
     getModels();
   }, []);
+
+  useEffect(() => {
+  }, [families]);
 
   const groupModelsByOrganization = useCallback((allModels: Model[]) => {
     
@@ -85,6 +96,11 @@ export default function ModelsPage() {
 
   const ModelsSkeleton = () => (
     <div className="space-y-16">
+      {/* FamilySection Skeleton */}
+      <div className="space-y-6">
+        <div className="h-8 w-48 bg-gray-200 rounded-lg animate-pulse"></div>
+        <div className="h-32 w-full bg-gray-100 rounded-xl animate-pulse"></div>
+      </div>
       {[1, 2].map((section) => (
         <div key={section} className="space-y-8">
           <div className="flex items-center gap-4">
@@ -94,8 +110,8 @@ export default function ModelsPage() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3, 4, 5, 6].map((card) => (
-              <div 
-                key={card} 
+              <div
+                key={card}
                 className="h-[160px] bg-gray-100 rounded-xl animate-pulse"
                 style={{ animationDelay: `${card * 0.1}s` }}
               >
@@ -193,7 +209,13 @@ export default function ModelsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white pt-24">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <motion.div 
+        {families && families.length > 0 && (
+          <FamilySection
+            families={families}
+            models={models}
+          />
+        )}
+        <motion.div
           className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-12"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -337,6 +359,16 @@ export default function ModelsPage() {
           isOpen={!!selectedModel}
           onClose={() => setSelectedModel(null)}
           allModels={filteredModels}
+        />
+        
+        <FamilyDetailsDialog
+          family={selectedFamily}
+          models={models}
+          isOpen={familyDialogOpen}
+          onClose={() => {
+            setFamilyDialogOpen(false);
+            setSelectedFamily(null);
+          }}
         />
       </div>
     </div>
